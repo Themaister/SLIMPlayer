@@ -12,7 +12,7 @@ namespace Video {
       public:
          Display() {}
 
-         virtual void show(uint8_t **data, int *pitch, int w, int h) = 0;
+         virtual void show(const uint8_t * const * data, const int *pitch, int w, int h) = 0;
 
          virtual ~Display() {}
    };

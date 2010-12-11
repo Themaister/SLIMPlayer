@@ -7,7 +7,7 @@ LIBS := -lrsound -lglfw -lCg -lCgGL
 FFMPEG_LIBS := -lavutil -lavformat -lavcodec
 INCDIRS := -I. -Icore
 
-CXX := g++ -std=gnu++0x -Wall
+CXX := g++ -std=gnu++0x -Wall -O0 -g
 
 all: $(TARGET)
 

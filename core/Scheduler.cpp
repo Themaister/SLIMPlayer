@@ -58,6 +58,16 @@ namespace AV
       size_t size = pkt.size;
 
       std::cout << "process_video(), size: " << size << std::endl;
+
+      AVFrame *frame = avcodec_alloc_frame();
+      int finished;
+
+      avcodec_decode_video2(file->video().ctx, frame, &finished, &pkt);
+
+      if (finished)
+         video->show(frame->data, frame->linesize, file->video().width, file->video().height);
+
+      av_free(frame);
    }
 
    void Scheduler::process_audio(AVPacket& pkt)

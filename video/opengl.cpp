@@ -152,6 +152,10 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
    glColor3f(1, 1, 1);
    glClearColor(0, 0, 0, 0);
 
+   glGenTextures(3, gl_tex);
+   glGenBuffers(1, &pbo);
+   glGenBuffers(1, &vbo);
+
    glfwSetWindowTitle("SLIMPlayer");
 
    init_cg();
@@ -201,7 +205,7 @@ int GL::get_alignment(int pitch)
    return 8;
 }
 
-void GL::show(uint8_t **data, int *pitch, int w, int h)
+void GL::show(const uint8_t * const * data, const int *pitch, int w, int h)
 {
    glClear(GL_COLOR_BUFFER_BIT);
 

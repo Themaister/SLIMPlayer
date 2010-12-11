@@ -114,7 +114,10 @@ namespace FF
       {
          vid_info.width = vctx->width;
          vid_info.height = vctx->height;
-         vid_info.aspect_ratio = (float)vctx->width * vctx->sample_aspect_ratio.num / (vctx->height * vctx->sample_aspect_ratio.den);
+         if (vctx->sample_aspect_ratio.den > 0 && vctx->sample_aspect_ratio.num > 0)
+            vid_info.aspect_ratio = (float)(vctx->width * vctx->sample_aspect_ratio.num) / (vctx->height * vctx->sample_aspect_ratio.den);
+         else
+            vid_info.aspect_ratio = (float)vctx->width / vctx->height;
          vid_info.active = true;
          vid_info.ctx = vctx;
       }
