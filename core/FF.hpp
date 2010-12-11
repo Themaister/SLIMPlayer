@@ -3,8 +3,12 @@
 
 #define __STDC_CONSTANT_MACROS
 #include <stdint.h>
+
+extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+}
+
 #include "General.hpp"
 
 namespace FF
@@ -12,8 +16,17 @@ namespace FF
    class Packet
    {
       public:
-         AVPacket* get();
+         Packet();
+         AVPacket& get();
          ~Packet();
+
+         enum class Type : unsigned
+         {
+            None = 0x0,
+            Error = 0x1,
+            Audio = 0x2,
+            Video = 0x4,
+         };
 
       private:
          AVPacket pkt;
@@ -41,6 +54,8 @@ namespace FF
          {
             unsigned channels;
             unsigned rate;
+            bool active;
+            AVCodecContext *ctx;
          };
 
          struct video_info
@@ -48,19 +63,28 @@ namespace FF
             unsigned width;
             unsigned height;
             float aspect_ratio;
+            bool active;
+            AVCodecContext *ctx;
          };
 
          const audio_info& audio() const;
          const video_info& video() const;
 
-         bool packet(Packet&);
+         Packet::Type packet(Packet&);
 
       private:
-         AVCodec *codec;
-         AVCodecContext *ctx;
+         AVCodec *acodec;
+         AVCodec *vcodec;
+         AVCodecContext *actx;
+         AVCodecContext *vctx;
          AVFormatContext *fctx;
          audio_info aud_info;
          video_info vid_info;
+         int vid_stream;
+         int aud_stream;
+
+         void resolve_codecs();
+         void set_media_info();
    };
 }
 
