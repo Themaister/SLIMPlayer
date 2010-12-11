@@ -64,7 +64,7 @@ class RSound : public Stream<T>
          }
          
          // Close to underrun, fill up buffer
-         if (rsd_delay_ms(rd) < m_latency / 2)
+         if (rsd_delay_ms(rd) < (size_t)(m_latency / 2))
          {
             size_t size = rsd_get_avail(rd);
             rsd_write(rd, emptybuf, size);
@@ -83,7 +83,7 @@ class RSound : public Stream<T>
             return 0;
 
          // We'll block
-         if (rsd_delay_ms(rd) > m_latency)
+         if (rsd_delay_ms(rd) > (size_t)m_latency)
             return 0;
 
          return rsd_get_avail(rd) / sizeof(T);
@@ -136,9 +136,9 @@ class RSound : public Stream<T>
       rsound_t *rd;
       int m_latency;
       uint8_t *emptybuf;
+      volatile bool thread_active;
       unsigned m_chan;
       std::thread thread;
-      volatile bool thread_active;
 
       int type_to_format(uint8_t) { return RSD_U8; }
       int type_to_format(int8_t) { return RSD_S8; }

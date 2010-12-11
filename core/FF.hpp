@@ -73,8 +73,8 @@ namespace FF
          Packet::Type packet(Packet&);
 
       private:
-         AVCodec *acodec;
          AVCodec *vcodec;
+         AVCodec *acodec;
          AVCodecContext *actx;
          AVCodecContext *vctx;
          AVFormatContext *fctx;

@@ -7,14 +7,9 @@ LIBS := -lrsound
 FFMPEG_LIBS := -lavutil -lavformat -lavcodec
 INCDIRS := -I. -Icore
 
-CXX := g++ -std=gnu++0x
+CXX := g++ -std=gnu++0x -Wall
 
-all: print_obj $(TARGET)
-
-
-print_obj:
-	@echo OBJ: $(TARGET_OBJ)
-
+all: $(TARGET)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $< $(INCDIRS)

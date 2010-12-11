@@ -68,8 +68,8 @@ namespace Audio
          }
 
       private:
-         ssize_t (*m_saved_callback)(T*, size_t, void*);
          ssize_t (*m_callback)(T*, size_t, void*);
+         ssize_t (*m_saved_callback)(T*, size_t, void*);
          void* data;
    };
 }}
