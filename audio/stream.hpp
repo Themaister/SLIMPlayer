@@ -9,7 +9,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include "../General.hpp"
+#include <atomic>
 
+namespace AV {
 namespace Audio 
 {
    template<class T>
@@ -25,14 +27,12 @@ namespace Audio
          // Notifies interface that you will not be writing more data to buffer until unpause();
          virtual void pause() 
          { 
-            std::scoped_lock foo(lock);
             m_saved_callback = m_callback; 
             m_callback = NULL;
          }
          // Notifies interface that you would like to start writing data again.
          virtual void unpause() 
          {
-            std::scoped_lock foo(lock);
             if (!m_callback)
                m_callback = m_saved_callback;
          }
@@ -43,9 +43,8 @@ namespace Audio
          virtual float delay() { return 0.0; }
 
          // By giving this a function pointer different than NULL, callback interface is activated. write() and write_avail() are no-ops. The callback will call this function sporadically. You can return a number of frames less than desired, but this will usually mean the driver itself will fill the rest with silence. cb_data is userdefined callback data. This can be NULL. After activating callback, by calling this again with NULL for callback argument, callbacks will be disabled and you can use normal, blocking write() and write_avail() again.
-         virtual void set_audio_callback(ssize_t (*cb)(T*, size_t frames, void *data), void *cb_data)
+         virtual void set_audio_callback(ssize_t (*cb)(T*, size_t frames, void *data), void *cb_data = NULL)
          {
-            std::scoped_lock foo(lock);
             m_callback = cb;
             data = cb_data;
          }
@@ -55,25 +54,24 @@ namespace Audio
       protected:
          inline bool callback_active()
          {
-            std::scoped_lock foo(lock);
             return m_callback;
          }
 
          inline ssize_t callback(T* out, size_t frames)
          {
-            std::scoped_lock foo(lock);
             if (!m_callback)
+            {
                return -1;
+            }
 
             return m_callback(out, frames, data);
          }
 
       private:
-         ssize_t (*m_callback)(T*, size_t, void*);
          ssize_t (*m_saved_callback)(T*, size_t, void*);
-         Threads::Mutex lock;
-         void *data;
+         ssize_t (*m_callback)(T*, size_t, void*);
+         void* data;
    };
-}
+}}
 
 #endif

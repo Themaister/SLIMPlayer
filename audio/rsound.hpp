@@ -6,15 +6,16 @@
 #include "rsound.h"
 #include <string>
 #include <thread>
-#endif
+#include <iostream>
 
+namespace AV {
 namespace Audio {
 
 template <class T>
 class RSound : public Stream<T>
 {
    public:
-      RSound(std::string server, int channels, int samplerate, int buffersize = 8092, int latency = 0) : thread_active(false), m_chan(channels), must_conv(false)
+      RSound(std::string server, int channels, int samplerate, int buffersize = 8092, int latency = 0) : thread_active(false), m_chan(channels)
       {
          rsd_init(&rd);
          int format = type_to_format(T());
@@ -26,8 +27,6 @@ class RSound : public Stream<T>
          if (buffersize < 256)
             buffersize = 256;
 
-         convbuf = new float[buffersize];
-         reconvbuf = new T[buffersize];
          buffersize *= sizeof(T);
          rsd_set_param(rd, RSD_BUFSIZE, &buffersize);
          rsd_set_param(rd, RSD_LATENCY, &latency);
@@ -56,16 +55,8 @@ class RSound : public Stream<T>
          if (!runnable || this->callback_active() || samples == 0)
             return 0;
 
-         const T *write_buf = in;
-         if (must_conv)
-         {
-            convert_frames(convbuf, m_chan, in, samples / m_chan);
-            Internal::float_to_array(reconvbuf, convbuf, samples);
-            write_buf = reconvbuf;
-         }
-
          rsd_delay_wait(rd);
-         size_t rc = rsd_write(rd, write_buf, samples * sizeof(T))/sizeof(T);
+         size_t rc = rsd_write(rd, in, samples * sizeof(T))/sizeof(T);
          if (rc == 0)
          {
             runnable = false;
@@ -109,18 +100,14 @@ class RSound : public Stream<T>
          }
       }
 
-      void set_audio_callback(ssize_t (*cb)(T*, size_t, void*), void *data)
+      void set_audio_callback(ssize_t (*cb)(T*, size_t, void*), void *data = NULL)
       {
          Stream<T>::set_audio_callback(cb, data);
 
          if (this->callback_active())
-         {
             start_thread();
-         }
          else
-         {
             stop_thread();
-         }
       }
 
       void unpause()
@@ -152,7 +139,6 @@ class RSound : public Stream<T>
       unsigned m_chan;
       std::thread thread;
       volatile bool thread_active;
-      bool must_conv;
 
       int type_to_format(uint8_t) { return RSD_U8; }
       int type_to_format(int8_t) { return RSD_S8; }
@@ -165,6 +151,7 @@ class RSound : public Stream<T>
       {
          if (runnable && this->callback_active() && !thread_active)
          {
+            std::cout << "Starting thread!" << std::endl;
             thread_active = true;
             thread = std::thread(&RSound<T>::callback_thread, this);
          }
@@ -172,8 +159,9 @@ class RSound : public Stream<T>
 
       void stop_thread()
       {
-         if (runnable && this->callback_active() && thread_active)
+         if (runnable && thread_active)
          {
+            std::cout << "Stopping thread!" << std::endl;
             thread_active = false;
             thread.join();
          }
@@ -188,10 +176,7 @@ class RSound : public Stream<T>
             if (ret < 0)
                break;
 
-            if (ret < 256)
-            {
-               memset(buf + ret * m_chan, 0, (256 - ret) * m_chan * sizeof(T));
-            }
+            std::fill(buf + ret * m_chan, buf + 256 * m_chan, 0);
 
             rsd_delay_wait(rd);
             if (rsd_write(rd, buf, 256 * m_chan * sizeof(T)) == 0)
@@ -201,6 +186,6 @@ class RSound : public Stream<T>
       }
 };
 
-}
+}}
 
 #endif

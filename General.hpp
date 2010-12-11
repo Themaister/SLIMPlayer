@@ -26,7 +26,7 @@ namespace General
    };
 
    template<class T>
-   unsigned ref_counted<T>::cnt = 0;
+   unsigned RefCounted<T>::cnt = 0;
 }
 
 #endif
