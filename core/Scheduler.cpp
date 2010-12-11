@@ -70,7 +70,10 @@ namespace AV
       avcodec_decode_video2(file->video().ctx, frame, &finished, &pkt);
 
       if (finished)
-         video->show(frame->data, frame->linesize, file->video().width, file->video().height);
+      {
+         video->frame(frame->data, frame->linesize, file->video().width, file->video().height);
+         video->flip();
+      }
    }
 
    void Scheduler::process_audio(AVPacket& pkt)

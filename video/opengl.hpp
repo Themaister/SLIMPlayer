@@ -18,7 +18,8 @@ namespace Video {
          GL(const GL&) = delete;
          void operator=(const GL&) = delete;
 
-         void show(const uint8_t * const * data, const int *pitch, int w, int h);
+         void frame(const uint8_t * const * data, const int *pitch, int w, int h);
+         void flip();
 
          ~GL();
       private:

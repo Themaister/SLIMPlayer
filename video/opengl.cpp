@@ -205,7 +205,7 @@ int GL::get_alignment(int pitch)
    return 8;
 }
 
-void GL::show(const uint8_t * const * data, const int *pitch, int w, int h)
+void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 {
    glClear(GL_COLOR_BUFFER_BIT);
 
@@ -226,6 +226,10 @@ void GL::show(const uint8_t * const * data, const int *pitch, int w, int h)
 
    glFlush();
    glDrawArrays(GL_QUADS, 0, 4);
+}
+
+void GL::flip()
+{
    glfwSwapBuffers();
 }
 

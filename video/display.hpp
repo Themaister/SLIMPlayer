@@ -12,7 +12,8 @@ namespace Video {
       public:
          Display() {}
 
-         virtual void show(const uint8_t * const * data, const int *pitch, int w, int h) = 0;
+         virtual void frame(const uint8_t * const * data, const int *pitch, int w, int h) = 0;
+         virtual void flip() = 0;
 
          virtual ~Display() {}
    };
