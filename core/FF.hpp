@@ -20,6 +20,12 @@ namespace FF
          AVPacket& get();
          ~Packet();
 
+         void operator=(const Packet&) = delete;
+         Packet(const Packet&) = delete;
+
+         Packet& operator=(Packet&&);
+         Packet(Packet&&);
+
          enum class Type : unsigned
          {
             None = 0x0,
@@ -29,7 +35,7 @@ namespace FF
          };
 
       private:
-         AVPacket pkt;
+         AVPacket *pkt;
    };
 
    // A ref counted class that keeps track of FFmpeg deinit and init. :)

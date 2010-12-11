@@ -18,10 +18,23 @@ namespace AV
 
       if (has_video)
          frame = avcodec_alloc_frame();
+
+      threads_active = true;
+
+      if (has_video)
+         video_thread = std::thread(&Scheduler::video_thread_fn, this);
+      if (has_audio)
+         audio_thread = std::thread(&Scheduler::audio_thread_fn, this);
    }
 
    Scheduler::~Scheduler()
    {
+      threads_active = false;
+      if (has_video)
+         video_thread.join();
+      if (has_audio)
+         audio_thread.join();
+
       if (has_video)
          av_free(frame);
    }
@@ -47,11 +60,11 @@ namespace AV
             return;
 
          case Packet::Type::Audio:
-            process_audio(pkt.get());
+            aud_pkt_queue.push(std::move(pkt));
             break;
 
          case Packet::Type::Video:
-            process_video(pkt.get());
+            vid_pkt_queue.push(std::move(pkt));
             break;
 
          default:
@@ -63,11 +76,14 @@ namespace AV
    {
       size_t size = pkt.size;
 
-      std::cout << "process_video(), size: " << size << std::endl;
+      //std::cout << "process_video(), size: " << size << std::endl;
 
       int finished;
 
       avcodec_decode_video2(file->video().ctx, frame, &finished, &pkt);
+
+      std::cout << "Video DTS: " << pkt.dts << " DTIME: " << pkt.dts * av_q2d(file->video().ctx->time_base) << std::endl;
+      std::cout << "Video PTS: " << pkt.pts << " PTIME: " << pkt.pts * av_q2d(file->video().ctx->time_base) << std::endl;
 
       if (finished)
       {
@@ -82,7 +98,7 @@ namespace AV
          return;
 
       size_t size = pkt.size;
-      std::cout << "process_audio(), size: " << size << std::endl;
+      //std::cout << "process_audio(), size: " << size << std::endl;
 
       std::array<int16_t, AVCODEC_MAX_AUDIO_FRAME_SIZE / 2> buf;
       while (size > 0)
@@ -92,9 +108,42 @@ namespace AV
          if (ret <= 0)
             break;
 
+         std::cout << "Audio DTS: " << pkt.dts << " DTIME: " << pkt.dts * av_q2d(file->audio().ctx->time_base) << std::endl;
+         std::cout << "Audio PTS: " << pkt.pts << " PTIME: " << pkt.pts * av_q2d(file->audio().ctx->time_base) << std::endl;
+
          size -= ret;
 
          audio->write(&buf[0], out_size / 2);
+      }
+   }
+
+   void Scheduler::video_thread_fn()
+   {
+      while (threads_active)
+      {
+         if (vid_pkt_queue.size() > 0)
+         {
+            Packet pkt = vid_pkt_queue.pull();
+            process_video(pkt.get());
+            usleep(10000);
+         }
+         else
+            usleep(10000);
+      }
+   }
+
+   void Scheduler::audio_thread_fn()
+   {
+      while (threads_active)
+      {
+         if (aud_pkt_queue.size() > 0)
+         {
+            Packet pkt = aud_pkt_queue.pull();
+            process_audio(pkt.get());
+            usleep(10000);
+         }
+         else
+            usleep(10000);
       }
    }
 }

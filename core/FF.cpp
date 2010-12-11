@@ -17,19 +17,40 @@ namespace FF
    FFMPEG::~FFMPEG()
    {}
 
-   Packet::Packet()
+   Packet::Packet() : pkt(NULL)
    {
-      memset(&pkt, 0, sizeof(pkt));
+      pkt = (AVPacket*)av_mallocz(sizeof(AVPacket));
+      av_init_packet(pkt);
+   }
+
+   Packet& Packet::operator=(Packet&& in_pkt)
+   {
+      if (pkt && pkt->data)
+         av_free_packet(pkt);
+      if (pkt)
+         av_freep(&pkt);
+
+      pkt = in_pkt.pkt;
+      in_pkt.pkt = NULL;
+      return *this;
+   }
+
+   Packet::Packet(Packet&& in_pkt) : pkt(NULL)
+   {
+      *this = std::move(in_pkt);
    }
 
    AVPacket& Packet::get()
    {
-      return pkt;
+      return *pkt;
    }
 
    Packet::~Packet()
    {
-      av_free_packet(&pkt);
+      if (pkt && pkt->data)
+         av_free_packet(pkt);
+      if (pkt)
+         av_freep(&pkt);
    }
 
    MediaFile::MediaFile(const char *path) : vcodec(NULL), acodec(NULL), actx(NULL), vctx(NULL), fctx(NULL), vid_stream(-1), aud_stream(-1)
@@ -114,10 +135,7 @@ namespace FF
       {
          vid_info.width = vctx->width;
          vid_info.height = vctx->height;
-         if (vctx->sample_aspect_ratio.den > 0 && vctx->sample_aspect_ratio.num > 0)
-            vid_info.aspect_ratio = (float)(vctx->width * vctx->sample_aspect_ratio.num) / (vctx->height * vctx->sample_aspect_ratio.den);
-         else
-            vid_info.aspect_ratio = (float)vctx->width / vctx->height;
+         vid_info.aspect_ratio = (float)vctx->width / vctx->height;
          vid_info.active = true;
          vid_info.ctx = vctx;
       }

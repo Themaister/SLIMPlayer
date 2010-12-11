@@ -6,9 +6,25 @@
 #include "FF.hpp"
 #include "video/display.hpp"
 #include "audio/stream.hpp"
+#include <queue>
+#include <mutex>
+#include <thread>
 
 namespace AV
 {
+   class PacketQueue
+   {
+      public:
+         void push(FF::Packet&& in);
+         FF::Packet pull();
+         size_t size() const;
+
+      private:
+         std::queue<FF::Packet> queue;
+         mutable std::mutex lock;
+   };
+
+
    class Scheduler : public General::Shared<Scheduler>
    {
       public:
@@ -29,8 +45,18 @@ namespace AV
          bool is_active;
          AVFrame *frame;
 
+         volatile bool threads_active;
+         PacketQueue vid_pkt_queue;
+         PacketQueue aud_pkt_queue;
+
+         std::thread video_thread;
+         std::thread audio_thread;
+
          void process_video(AVPacket&);
          void process_audio(AVPacket&);
+
+         void video_thread_fn();
+         void audio_thread_fn();
    };
 }
 
