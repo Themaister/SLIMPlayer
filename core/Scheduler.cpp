@@ -15,10 +15,16 @@ namespace AV
    {
       has_video = file->video().active;
       has_audio = file->audio().active;
+
+      if (has_video)
+         frame = avcodec_alloc_frame();
    }
 
    Scheduler::~Scheduler()
-   {}
+   {
+      if (has_video)
+         av_free(frame);
+   }
 
    bool Scheduler::active() const
    {
@@ -59,15 +65,12 @@ namespace AV
 
       std::cout << "process_video(), size: " << size << std::endl;
 
-      AVFrame *frame = avcodec_alloc_frame();
       int finished;
 
       avcodec_decode_video2(file->video().ctx, frame, &finished, &pkt);
 
       if (finished)
          video->show(frame->data, frame->linesize, file->video().width, file->video().height);
-
-      av_free(frame);
    }
 
    void Scheduler::process_audio(AVPacket& pkt)

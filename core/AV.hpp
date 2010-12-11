@@ -27,6 +27,7 @@ namespace AV
          bool has_video;
          bool has_audio;
          bool is_active;
+         AVFrame *frame;
 
          void process_video(AVPacket&);
          void process_audio(AVPacket&);
