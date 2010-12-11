@@ -9,7 +9,8 @@ namespace Video {
    class Display : public General::Shared<Display>
    {
       public:
-         virtual ~Display();
+         Display() {}
+         virtual ~Display() {}
    };
 
 }}
