@@ -8,7 +8,7 @@
 #include <limits>
 #include <string.h>
 #include <stdlib.h>
-#include "../General.hpp"
+#include "General.hpp"
 #include <atomic>
 
 namespace AV {

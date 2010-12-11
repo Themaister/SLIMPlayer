@@ -1,6 +1,6 @@
 #include "FF.hpp"
 #include "audio/rsound.hpp"
-#include "Video.hpp"
+#include "video/opengl.hpp"
 #include "AV.hpp"
 #include <stdexcept>
 #include <iostream>
@@ -18,13 +18,11 @@ int main(int argc, char *argv[])
       return 1;
    }
 
-   FF::init();
-
    try
    {
       MediaFile::Ptr media_file = std::make_shared<MediaFile>(argv[1]);
-      Stream::Ptr audio = std::make_shared<RSound>(media_file.audio().channels, media_file.audio().rate);
-      Display::Ptr video = std::make_shared<GL>(media_file.video().width, media_file().height, media_file().aspect_ratio);
+      Stream<int16_t>::Ptr audio = std::make_shared<RSound<int16_t>>("localhost", media_file->audio().channels, media_file->audio().rate);
+      Display::Ptr video = std::make_shared<GL>(media_file->video().width, media_file->video().height, media_file->video().aspect_ratio);
 
       AV::Scheduler sched(media_file, audio, video);
 
@@ -35,5 +33,4 @@ int main(int argc, char *argv[])
    }
    catch (std::exception &e) { std::cerr << e.what() << std::endl; }
 
-   FF::deinit();
 }

@@ -1,9 +1,11 @@
 TARGET = slimplay
 
-TARGET_OBJ := $(patsubst .cpp,.o,$(wildcard */*.cpp))
+TARGET_SRC := $(wildcard */*.cpp)
+TARGET_OBJ := $(TARGET_SRC:.cpp=.o)
 
 LIBS := -lrsound
 FFMPEG_LIBS := -lavutil -lavformat -lavcodec
+INCDIRS := -I. -Icore
 
 CXX := g++ -std=gnu++0x
 
@@ -15,11 +17,11 @@ print_obj:
 
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $< $(INCDIRS)
 
 
 $(TARGET): $(TARGET_OBJ)
-	$(CXX) -o $@ $< $(FFMPEG_LIBS) $(LIBS)
+	$(CXX) -o $@ $(TARGET_OBJ) $(FFMPEG_LIBS) $(LIBS)
 
 clean:
 	rm -f $(TARGET_OBJ)

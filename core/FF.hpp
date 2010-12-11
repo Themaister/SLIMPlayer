@@ -1,8 +1,10 @@
 #ifndef __FF_HPP
 #define __FF_HPP
 
-#include <libavformat/avformat.h>
+#define __STDC_CONSTANT_MACROS
+#include <stdint.h>
 #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
 #include "General.hpp"
 
 namespace FF
@@ -25,7 +27,7 @@ namespace FF
          ~FFMPEG();
    };
 
-   class MediaFile : public FFMPEG
+   class MediaFile : public FFMPEG, public General::Shared<MediaFile>
    {
       public:
          MediaFile(const char *path);

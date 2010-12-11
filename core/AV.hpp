@@ -4,15 +4,15 @@
 
 #include "General.hpp"
 #include "FF.hpp"
-#include "video/Video.hpp"
-#include "audio/Audio.hpp"
+#include "video/display.hpp"
+#include "audio/stream.hpp"
 
 namespace AV
 {
    class Scheduler : public General::Shared<Scheduler>
    {
       public:
-         Scheduler(FF::MediaFile::Ptr in_file, AV::Audio::Stream::Ptr in_audio, AV::Video::Display::Ptr in_vid = AV::Video::Display::Ptr());
+         Scheduler(FF::MediaFile::Ptr in_file, AV::Audio::Stream<int16_t>::Ptr in_audio, AV::Video::Display::Ptr in_vid = AV::Video::Display::Ptr());
          Scheduler& operator=(Scheduler&&);
          Scheduler(Scheduler&&);
          void operator=(const Scheduler&) = delete;
@@ -24,7 +24,7 @@ namespace AV
          void run();
       private:
          FF::MediaFile::Ptr file;
-         AV::Audio::Stream::Ptr audio;
+         AV::Audio::Stream<int16_t>::Ptr audio;
          AV::Video::Display::Ptr video;
    };
 }
