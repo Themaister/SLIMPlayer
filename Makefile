@@ -3,7 +3,7 @@ TARGET = slimplay
 TARGET_SRC := $(wildcard */*.cpp)
 TARGET_OBJ := $(TARGET_SRC:.cpp=.o)
 
-LIBS := -lrsound
+LIBS := -lrsound -lglfw -lCg -lCgGL
 FFMPEG_LIBS := -lavutil -lavformat -lavcodec
 INCDIRS := -I. -Icore
 

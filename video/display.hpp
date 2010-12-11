@@ -2,6 +2,7 @@
 #define __VIDEO_HPP
 
 #include "General.hpp"
+#include <stdint.h>
 
 namespace AV {
 namespace Video {
@@ -10,6 +11,9 @@ namespace Video {
    {
       public:
          Display() {}
+
+         virtual void show(uint8_t **data, int *pitch, int w, int h) = 0;
+
          virtual ~Display() {}
    };
 

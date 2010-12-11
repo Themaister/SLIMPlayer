@@ -46,6 +46,7 @@ namespace AV
 
          case Packet::Type::Video:
             process_video(pkt.get());
+            break;
 
          default:
             throw std::runtime_error("What kind of package is this? o.o\n");
