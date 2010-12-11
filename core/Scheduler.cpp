@@ -1,9 +1,10 @@
 #include "FF.hpp"
 #include "AV.hpp"
-#include "audio/stream.hpp"
-#include "video/display.hpp"
+#include "audio/rsound.hpp"
+#include "video/opengl.hpp"
 #include <iostream>
 #include <array>
+#include <memory>
 
 using namespace FF;
 using namespace AV::Audio;
@@ -11,7 +12,7 @@ using namespace AV::Video;
 
 namespace AV
 {
-   Scheduler::Scheduler(MediaFile::Ptr in_file, Stream<int16_t>::Ptr in_audio, Display::Ptr in_vid) : file(in_file), audio(in_audio), video(in_vid), is_active(true)
+   Scheduler::Scheduler(MediaFile::Ptr in_file) : file(in_file), is_active(true)
    {
       has_video = file->video().active;
       has_audio = file->audio().active;
@@ -30,6 +31,7 @@ namespace AV
    Scheduler::~Scheduler()
    {
       threads_active = false;
+
       if (has_video)
          video_thread.join();
       if (has_audio)
@@ -72,7 +74,7 @@ namespace AV
       }
    }
 
-   void Scheduler::process_video(AVPacket& pkt)
+   void Scheduler::process_video(AVPacket& pkt, Display::Ptr& vid)
    {
       size_t size = pkt.size;
 
@@ -87,12 +89,12 @@ namespace AV
 
       if (finished)
       {
-         video->frame(frame->data, frame->linesize, file->video().width, file->video().height);
-         video->flip();
+         vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
+         vid->flip();
       }
    }
 
-   void Scheduler::process_audio(AVPacket& pkt)
+   void Scheduler::process_audio(AVPacket& pkt, Stream<int16_t>::Ptr& aud)
    {
       if (!has_audio)
          return;
@@ -113,19 +115,20 @@ namespace AV
 
          size -= ret;
 
-         audio->write(&buf[0], out_size / 2);
+         aud->write(&buf[0], out_size / 2);
       }
    }
 
    void Scheduler::video_thread_fn()
    {
+      Display::Ptr vid = std::make_shared<GL>(file->video().width, file->video().height, file->video().aspect_ratio);
+
       while (threads_active)
       {
          if (vid_pkt_queue.size() > 0)
          {
             Packet pkt = vid_pkt_queue.pull();
-            process_video(pkt.get());
-            usleep(10000);
+            process_video(pkt.get(), vid);
          }
          else
             usleep(10000);
@@ -134,13 +137,14 @@ namespace AV
 
    void Scheduler::audio_thread_fn()
    {
+      Stream<int16_t>::Ptr aud = std::make_shared<RSound<int16_t>>("localhost", file->audio().channels, file->audio().rate);
+
       while (threads_active)
       {
          if (aud_pkt_queue.size() > 0)
          {
             Packet pkt = aud_pkt_queue.pull();
-            process_audio(pkt.get());
-            usleep(10000);
+            process_audio(pkt.get(), aud);
          }
          else
             usleep(10000);

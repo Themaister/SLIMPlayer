@@ -20,22 +20,14 @@ int main(int argc, char *argv[])
 
    try
    {
-      Stream<int16_t>::Ptr audio;
-      Display::Ptr video;
-
       MediaFile::Ptr media_file = std::make_shared<MediaFile>(argv[1]);
       
-      if (media_file->audio().active)
-         audio = std::make_shared<RSound<int16_t>>("localhost", media_file->audio().channels, media_file->audio().rate);
-
-      if (media_file->video().active)
-         video = std::make_shared<GL>(media_file->video().width, media_file->video().height, media_file->video().aspect_ratio);
-
-      AV::Scheduler sched(media_file, audio, video);
+      AV::Scheduler sched(media_file);
 
       while (sched.active())
       {
          sched.run();
+         usleep(1000);
       }
    }
    catch (std::exception &e) { std::cerr << e.what() << std::endl; }

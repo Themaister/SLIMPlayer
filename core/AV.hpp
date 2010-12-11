@@ -9,6 +9,7 @@
 #include <queue>
 #include <mutex>
 #include <thread>
+#include <stdint.h>
 
 namespace AV
 {
@@ -28,7 +29,7 @@ namespace AV
    class Scheduler : public General::Shared<Scheduler>
    {
       public:
-         Scheduler(FF::MediaFile::Ptr in_file, AV::Audio::Stream<int16_t>::Ptr in_audio, AV::Video::Display::Ptr in_vid = AV::Video::Display::Ptr());
+         Scheduler(FF::MediaFile::Ptr in_file);
          void operator=(const Scheduler&) = delete;
          Scheduler(const Scheduler&) = delete;
 
@@ -52,8 +53,8 @@ namespace AV
          std::thread video_thread;
          std::thread audio_thread;
 
-         void process_video(AVPacket&);
-         void process_audio(AVPacket&);
+         void process_video(AVPacket&, AV::Video::Display::Ptr&);
+         void process_audio(AVPacket&, AV::Audio::Stream<int16_t>::Ptr&);
 
          void video_thread_fn();
          void audio_thread_fn();

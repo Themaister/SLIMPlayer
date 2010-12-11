@@ -1,5 +1,6 @@
 #include "FF.hpp"
 #include <stdexcept>
+#include <iostream>
 
 namespace FF
 {
@@ -19,12 +20,14 @@ namespace FF
 
    Packet::Packet() : pkt(NULL)
    {
+      //std::cerr << "Packet()" << std::endl;
       pkt = (AVPacket*)av_mallocz(sizeof(AVPacket));
-      av_init_packet(pkt);
+      //av_init_packet(pkt);
    }
 
    Packet& Packet::operator=(Packet&& in_pkt)
    {
+      //std::cerr << "Packet::operator=(&&)" << std::endl;
       if (pkt && pkt->data)
          av_free_packet(pkt);
       if (pkt)
@@ -37,16 +40,23 @@ namespace FF
 
    Packet::Packet(Packet&& in_pkt) : pkt(NULL)
    {
+      //std::cerr << "Packet(&&)" << std::endl;
       *this = std::move(in_pkt);
    }
 
    AVPacket& Packet::get()
    {
+      if (pkt == NULL)
+         throw std::runtime_error("Trying to dereference NULL\n");
+
+      //std::cerr << "get()" << std::endl;
       return *pkt;
    }
 
    Packet::~Packet()
    {
+      //std::cerr << "~Packet()" << std::endl;
+
       if (pkt && pkt->data)
          av_free_packet(pkt);
       if (pkt)
