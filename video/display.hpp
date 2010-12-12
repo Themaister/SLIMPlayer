@@ -1,6 +1,7 @@
 #ifndef __VIDEO_HPP
 #define __VIDEO_HPP
 
+#define _STDC_CONSTANT_MACROS 1
 #include "General.hpp"
 #include <stdint.h>
 

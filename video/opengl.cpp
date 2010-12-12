@@ -8,10 +8,12 @@
 #include <Cg/cgGL.h>
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 #include <stdexcept>
 
 using namespace AV::Video;
+using namespace AV;
 
 namespace Internal 
 {
@@ -289,3 +291,58 @@ void GL::uninit_cg()
       cg_inited = false;
    }
 }
+
+namespace Internal
+{
+   static const std::vector<std::pair<int, EventHandler::Event>> glfw_cmd = {
+      {GLFW_KEY_ESC, EventHandler::Event::Quit}
+   };
+
+   static auto current_event = EventHandler::Event::None;
+
+   extern "C" {
+      static GLFWCALL void keypress_cb(int, int);
+      static GLFWCALL int winclose_cb();
+   }
+
+   static GLFWCALL void keypress_cb(int key, int action)
+   {
+      if (action == GLFW_RELEASE)
+         return;
+
+      auto itr = std::find_if(glfw_cmd.begin(), glfw_cmd.end(), 
+            [key](const std::pair<int, EventHandler::Event>& event)
+            {
+               return key == event.first;
+            });
+
+      if (itr != glfw_cmd.end())
+         current_event = itr->second;
+   }
+
+   static GLFWCALL int winclose_cb()
+   {
+      current_event = EventHandler::Event::Quit;
+      return GL_FALSE;
+   }
+}
+
+GLEvent::GLEvent()
+{
+   glfwSetKeyCallback(Internal::keypress_cb);
+   glfwSetWindowCloseCallback(Internal::winclose_cb);
+}
+
+void GLEvent::poll()
+{
+   // Need to do this in same thread as GL. :(
+   //glfwPollEvents();
+}
+
+EventHandler::Event GLEvent::event()
+{
+   auto tmp = Internal::current_event;
+   Internal::current_event = EventHandler::Event::None;
+   return tmp;
+}
+

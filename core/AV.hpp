@@ -7,6 +7,7 @@
 #include "video/display.hpp"
 #include "audio/stream.hpp"
 #include <queue>
+#include <list>
 #include <mutex>
 #include <thread>
 #include <stdint.h>
@@ -25,6 +26,22 @@ namespace AV
          mutable std::mutex lock;
    };
 
+   class EventHandler : public General::Shared<EventHandler>
+   {
+      public:
+         enum class Event : unsigned
+         {
+            Pause,
+            Quit,
+            Seek,
+            None,
+         };
+
+         virtual Event event() = 0;
+         virtual void poll() = 0;
+
+         virtual ~EventHandler() {}
+   };
 
    class Scheduler : public General::Shared<Scheduler>
    {
@@ -35,8 +52,11 @@ namespace AV
 
          ~Scheduler();
 
+         void add_event_handler(EventHandler::Ptr& ptr);
+
          bool active() const;
          void run();
+
       private:
          FF::MediaFile::Ptr file;
          AV::Audio::Stream<int16_t>::Ptr audio;
@@ -51,6 +71,9 @@ namespace AV
          double video_pts_ts;
          size_t audio_written;
          std::mutex avlock;
+
+         std::list<EventHandler::Ptr> event_handlers;
+         EventHandler::Event next_event();
 
          volatile bool threads_active;
          PacketQueue vid_pkt_queue;

@@ -6,6 +6,7 @@
 #include <array>
 #include <memory>
 #include <time.h>
+#include <algorithm>
 
 using namespace FF;
 using namespace AV::Audio;
@@ -47,8 +48,38 @@ namespace AV
       return is_active;
    }
 
+   EventHandler::Event Scheduler::next_event()
+   {
+      auto event = EventHandler::Event::None;
+
+      std::for_each(event_handlers.begin(), event_handlers.end(), 
+            [&event](EventHandler::Ptr& handler) 
+            {
+               handler->poll();
+               auto evnt = handler->event();
+
+               if (event == EventHandler::Event::None)
+                  event = evnt;
+            });
+      return event;
+   }
+
    void Scheduler::run()
    {
+      avlock.lock();
+      auto event = next_event();
+      avlock.unlock();
+
+      switch (event)
+      {
+         case EventHandler::Event::Quit:
+            std::cerr << "Quitting!!!" << std::endl;
+            is_active = false;
+            break;
+         default:
+            break;
+      }
+
       Packet pkt;
 
       Packet::Type type = file->packet(pkt);
@@ -75,6 +106,7 @@ namespace AV
       }
    }
 
+   // Unix/Linux specific.
    void Scheduler::sync_sleep(float secs)
    {
       int64_t nsecs = (int64_t)(secs * 1000000000);
@@ -85,6 +117,7 @@ namespace AV
       nanosleep(&tv, NULL);
    }
 
+   // Unix/Linux specific.
    double Scheduler::get_time()
    {
       struct timespec tv;
@@ -179,6 +212,7 @@ namespace AV
       uint8_t *pkt_data = pkt.data;
       size_t pkt_size = pkt.size;
 
+      // AVCODEC_MAX_AUDIO_FRAME_SIZE / 2 would do, but FFmpeg needs some extra padding-stuff, so why not...
       std::array<int16_t, AVCODEC_MAX_AUDIO_FRAME_SIZE> buf;
       while (pkt.size > 0)
       {
@@ -196,6 +230,7 @@ namespace AV
          aud->write(&buf[0], out_size / 2);
          audio_written += out_size;
 
+         // Update Audio timestamp. Doesn't use the actual audio pts, but I really doubt we'll need that. PCM is PCM after all :)
          avlock.lock();
          audio_pts = (float)audio_written/(file->audio().rate * file->audio().channels * 2) - aud->delay();
          audio_pts_ts = get_time();
@@ -206,9 +241,15 @@ namespace AV
       pkt.size = pkt_size;
    }
 
+   // Video thread
    void Scheduler::video_thread_fn()
    {
       Display::Ptr vid = std::make_shared<GL>(file->video().width, file->video().height, file->video().aspect_ratio);
+
+      // Add event handler for GL.
+      avlock.lock();
+      event_handlers.push_back(std::make_shared<GLEvent>());
+      avlock.unlock();
 
       while (threads_active)
       {
@@ -222,6 +263,7 @@ namespace AV
       }
    }
 
+   // Audio thread
    void Scheduler::audio_thread_fn()
    {
       Stream<int16_t>::Ptr aud = std::make_shared<RSound<int16_t>>("localhost", file->audio().channels, file->audio().rate);

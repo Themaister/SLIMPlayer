@@ -2,6 +2,7 @@
 #define __OPENGL_HPP
 
 #include "display.hpp"
+#include "AV.hpp"
 
 #define GL_GLEXT_PROTOTYPES
 #include <Cg/cg.h>
@@ -46,6 +47,14 @@ namespace Video {
          } cg;
 
          static int get_alignment(int pitch);
+   };
+
+   class GLEvent : public AV::EventHandler
+   {
+      public:
+         GLEvent();
+         Event event();
+         void poll();
    };
 
 }}

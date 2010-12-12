@@ -1,12 +1,30 @@
 #ifndef __FF_HPP
 #define __FF_HPP
 
-#define __STDC_CONSTANT_MACROS
 #include <stdint.h>
 
 extern "C" {
+
+// This stuff doesn't seem to be pulled in properly...
+
+#ifndef __CONCAT
+#define __CONCAT(value, suffix) value##suffix
+#endif
+
+#define INT8_C(value) ((int8_t) value) 
+#define UINT8_C(value) ((uint8_t) __CONCAT(value, U)) 
+#define INT16_C(value) value 
+#define UINT16_C(value) __CONCAT(value, U) 
+#define INT32_C(value) __CONCAT(value, L) 
+#define UINT32_C(value) __CONCAT(value, UL) 
+#define INT64_C(value) __CONCAT(value, LL) 
+#define UINT64_C(value) __CONCAT(value, ULL) 
+#define INTMAX_C(value) __CONCAT(value, LL) 
+#define UINTMAX_C(value) __CONCAT(value, ULL)
+
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+
 }
 
 #include "General.hpp"
