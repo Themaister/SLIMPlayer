@@ -171,10 +171,6 @@ namespace FF
          aud_info.rate = actx->sample_rate;
          aud_info.active = true;
          aud_info.ctx = actx;
-
-         // FFmpeg hack
-         if (actx->time_base.num > 1000 && actx->time_base.den == 1)
-            actx->time_base.den = 1000;
       }
       else
          aud_info.active = false;
@@ -186,10 +182,6 @@ namespace FF
          vid_info.aspect_ratio = (float)vctx->width / vctx->height;
          vid_info.active = true;
          vid_info.ctx = vctx;
-
-         // FFmpeg hack
-         if (vctx->time_base.num > 1000 && vctx->time_base.den == 1)
-            vctx->time_base.den = 1000;
 
          vctx->get_buffer = Internal::get_buffer;
          vctx->release_buffer = Internal::release_buffer;

@@ -66,6 +66,7 @@ namespace AV
 
          static void sync_sleep(float time);
          static double get_time();
+         double time_base() const;
    };
 }
 

@@ -77,7 +77,6 @@ namespace AV
 
    void Scheduler::sync_sleep(float secs)
    {
-      std::cout << "Video thread sleeping for " << secs << " secs!" << std::endl;
       int64_t nsecs = (int64_t)(secs * 1000000000);
       struct timespec tv;
       tv.tv_sec = nsecs / 1000000000;
@@ -93,46 +92,48 @@ namespace AV
       return (double)tv.tv_sec + (double)tv.tv_nsec / 1000000000.0;
    }
 
+   double Scheduler::time_base() const
+   {
+      float timebase = file->video().ctx->ticks_per_frame * av_q2d(file->video().ctx->time_base);
+      // FFmpeg hack :(
+      if (file->video().ctx->time_base.den > 1000 && file->video().ctx->time_base.num == 1)
+         timebase *= 1000.0;
+
+      return timebase;
+   }
+
    void Scheduler::process_video(AVPacket& pkt, Display::Ptr& vid)
    {
-      size_t size = pkt.size;
-
-      //std::cout << "process_video(), size: " << size << std::endl;
+      if (!has_video)
+         return;
 
       int finished = 0;
 
-      uint64_t pts = 0;
-
+      uint64_t pts = pkt.pts;
       FF::set_global_pts(pkt.pts);
 
       avcodec_decode_video2(file->video().ctx, frame, &finished, &pkt);
 
-      if (pkt.dts == AV_NOPTS_VALUE && frame->opaque && *(uint64_t*)frame->opaque != AV_NOPTS_VALUE)
+      if (pkt.dts == (int64_t)AV_NOPTS_VALUE && frame->opaque && *(uint64_t*)frame->opaque != AV_NOPTS_VALUE)
       {
          pts = *(uint64_t*)frame->opaque;
       }
-      else if (pkt.dts != AV_NOPTS_VALUE)
+      else if (pkt.dts != (int64_t)AV_NOPTS_VALUE)
       {
          pts = pkt.dts;
       }
-      else
-         pts = 0;
 
-      pts *= file->video().ctx->ticks_per_frame * av_q2d(file->video().ctx->time_base);
+      // We're not using this value atm... It doesn't seem quite right.
+      pts *= time_base();
       // This PTS value seems to be bogus when you compare it to audio PTS!
       // PTS sometimes doesn't increase either after one finished iteration (?!?!).
 
-      std::cout << "Video PTS: " << pts << "Time: " << pts * av_q2d(file->video().ctx->time_base) << std::endl;
       // If we got a finished frame, show it to the screen. :)
       // Always seems to be finished for some strange reason.
       if (finished)
       {
-         video_pts += file->video().ctx->ticks_per_frame * av_q2d(file->video().ctx->time_base);
-         video_pts += frame->repeat_pict / (2 * (file->video().ctx->ticks_per_frame * av_q2d(file->video().ctx->time_base)));
-
-         std::cout << "Calculated pts: " << video_pts << std::endl;
-
-         std::cout << "INTERLACED: " << frame->interlaced_frame << std::endl;
+         video_pts += time_base();
+         video_pts += frame->repeat_pict / (2.0 * time_base());
 
          vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
 
@@ -146,15 +147,11 @@ namespace AV
             double sleep_time = video_pts - (audio_pts + delta);
 
             double last_frame_delta = get_time();
-            //std::cout << "last_frame_delta! " << last_frame_delta << std::endl;
-            //std::cout << "video_pts_ts! " << video_pts_ts << std::endl;
             last_frame_delta -= video_pts_ts;
-
-            //std::cout << "DELTA: " << last_frame_delta << std::endl;
 
             // We try to keep the sleep time to a somewhat small value to avoid choppy video in some cases.
             // Max sleep time should be a bit over 1 frame time to allow audio to catch up.
-            double max_sleep = 3.0 * av_q2d(file->video().ctx->time_base) - last_frame_delta;
+            double max_sleep = 1.5 * time_base() - last_frame_delta;
 
             if (max_sleep < 0.0)
                max_sleep = 0.0;
@@ -169,19 +166,12 @@ namespace AV
          video_pts_ts = get_time();
          vid->flip();
       }
-      else
-      {
-         //std::cout << "Frame was not finished!" << std::endl;
-      }
    }
 
    void Scheduler::process_audio(AVPacket& pkt, Stream<int16_t>::Ptr& aud)
    {
       if (!has_audio)
          return;
-
-      size_t size = pkt.size;
-      //std::cout << "process_audio(), size: " << size << std::endl;
 
       uint8_t *pkt_data = pkt.data;
       size_t pkt_size = pkt.size;
@@ -204,7 +194,6 @@ namespace AV
          audio_written += out_size;
          audio_pts = (float)audio_written/(file->audio().rate * file->audio().channels * 2) - aud->delay();
          audio_pts_ts = get_time();
-         std::cout << "AUDIO PTS (seconds): " << audio_pts << std::endl;
       }
 
       pkt.data = pkt_data;
