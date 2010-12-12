@@ -50,6 +50,7 @@ namespace AV
          double audio_pts_ts;
          double video_pts_ts;
          size_t audio_written;
+         std::mutex avlock;
 
          volatile bool threads_active;
          PacketQueue vid_pkt_queue;

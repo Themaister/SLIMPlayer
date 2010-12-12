@@ -132,6 +132,7 @@ namespace AV
       // Always seems to be finished for some strange reason.
       if (finished)
       {
+         // I really doubt this will work with variable FPS, but hey. This approach seems to work well for the videos I've tested so far.
          video_pts += time_base();
          video_pts += frame->repeat_pict / (2.0 * time_base());
 
@@ -140,12 +141,14 @@ namespace AV
          // We have to calculate how long we should wait before swapping frame to screen.
          // We sync everything to audio clock.
          double delta = get_time();
+
+         avlock.lock();
          delta -= audio_pts_ts;
+         double sleep_time = video_pts - (audio_pts + delta);
+         avlock.unlock();
 
          if (video_pts > (audio_pts + delta))
          {
-            double sleep_time = video_pts - (audio_pts + delta);
-
             double last_frame_delta = get_time();
             last_frame_delta -= video_pts_ts;
 
@@ -192,8 +195,11 @@ namespace AV
 
          aud->write(&buf[0], out_size / 2);
          audio_written += out_size;
+
+         avlock.lock();
          audio_pts = (float)audio_written/(file->audio().rate * file->audio().channels * 2) - aud->delay();
          audio_pts_ts = get_time();
+         avlock.unlock();
       }
 
       pkt.data = pkt_data;
