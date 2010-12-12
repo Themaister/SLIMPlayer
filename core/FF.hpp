@@ -13,6 +13,8 @@ extern "C" {
 
 namespace FF
 {
+   void set_global_pts(uint64_t);
+
    class Packet
    {
       public:

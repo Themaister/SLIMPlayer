@@ -45,6 +45,11 @@ namespace AV
          bool has_audio;
          bool is_active;
          AVFrame *frame;
+         double video_pts;
+         double audio_pts;
+         double audio_pts_ts;
+         double video_pts_ts;
+         size_t audio_written;
 
          volatile bool threads_active;
          PacketQueue vid_pkt_queue;
@@ -58,6 +63,9 @@ namespace AV
 
          void video_thread_fn();
          void audio_thread_fn();
+
+         static void sync_sleep(float time);
+         static double get_time();
    };
 }
 
