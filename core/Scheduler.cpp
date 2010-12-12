@@ -118,53 +118,61 @@ namespace AV
       else
          pts = 0;
 
-      pts *= av_q2d(file->video().ctx->time_base);
+      pts *= file->video().ctx->ticks_per_frame * av_q2d(file->video().ctx->time_base);
+      // This PTS value seems to be bogus when you compare it to audio PTS!
+      // PTS sometimes doesn't increase either after one finished iteration (?!?!).
 
       std::cout << "Video PTS: " << pts << "Time: " << pts * av_q2d(file->video().ctx->time_base) << std::endl;
-
-      if (pts == 0)
-         std::cout << "WAAAAAAAAAAAAAAAAAAT" << std::endl;
-
+      // If we got a finished frame, show it to the screen. :)
+      // Always seems to be finished for some strange reason.
       if (finished)
       {
-         video_pts += 2 * av_q2d(file->video().ctx->time_base);
-         //video_pts = pts * av_q2d(file->video().ctx->time_base) * 2;
+         video_pts += file->video().ctx->ticks_per_frame * av_q2d(file->video().ctx->time_base);
+         video_pts += frame->repeat_pict / (2 * (file->video().ctx->ticks_per_frame * av_q2d(file->video().ctx->time_base)));
 
-         if (!frame->repeat_pict)
+         std::cout << "Calculated pts: " << video_pts << std::endl;
+
+         std::cout << "INTERLACED: " << frame->interlaced_frame << std::endl;
+
+         vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
+
+         // We have to calculate how long we should wait before swapping frame to screen.
+         // We sync everything to audio clock.
+         double delta = get_time();
+         delta -= audio_pts_ts;
+
+         if (video_pts > (audio_pts + delta))
          {
-            vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
+            double sleep_time = video_pts - (audio_pts + delta);
 
-            double delta = get_time();
-            delta -= audio_pts_ts;
+            double last_frame_delta = get_time();
+            //std::cout << "last_frame_delta! " << last_frame_delta << std::endl;
+            //std::cout << "video_pts_ts! " << video_pts_ts << std::endl;
+            last_frame_delta -= video_pts_ts;
 
-            if (video_pts > (audio_pts + delta))
+            //std::cout << "DELTA: " << last_frame_delta << std::endl;
+
+            // We try to keep the sleep time to a somewhat small value to avoid choppy video in some cases.
+            // Max sleep time should be a bit over 1 frame time to allow audio to catch up.
+            double max_sleep = 3.0 * av_q2d(file->video().ctx->time_base) - last_frame_delta;
+
+            if (max_sleep < 0.0)
+               max_sleep = 0.0;
+
+            if (sleep_time > max_sleep)
             {
-               double sleep_time = video_pts - (audio_pts + delta);
-
-               double last_frame_delta = get_time();
-               std::cout << "last_frame_delta! " << last_frame_delta << std::endl;
-               std::cout << "video_pts_ts! " << video_pts_ts << std::endl;
-               last_frame_delta -= video_pts_ts;
-
-               std::cout << "DELTA: " << last_frame_delta << std::endl;
-
-               double max_sleep = 3.0 * av_q2d(file->video().ctx->time_base) - last_frame_delta;
-               if (max_sleep < 0.0)
-                  max_sleep = 0.0;
-
-               if (sleep_time > max_sleep)
-               {
-                  sleep_time = max_sleep;
-               }
-               sync_sleep(sleep_time);
+               sleep_time = max_sleep;
             }
-
-            video_pts_ts = get_time();
-            vid->flip();
+            sync_sleep(sleep_time);
          }
+
+         video_pts_ts = get_time();
+         vid->flip();
       }
       else
-         std::cout << "Frame was not finished!" << std::endl;
+      {
+         //std::cout << "Frame was not finished!" << std::endl;
+      }
    }
 
    void Scheduler::process_audio(AVPacket& pkt, Stream<int16_t>::Ptr& aud)
