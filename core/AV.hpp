@@ -26,7 +26,7 @@ namespace AV
          mutable std::mutex lock;
    };
 
-   class EventHandler : public General::SharedVirtual<EventHandler>
+   class EventHandler : public General::SharedAbstract<EventHandler>
    {
       public:
          enum class Event : unsigned
@@ -52,7 +52,7 @@ namespace AV
 
          ~Scheduler();
 
-         void add_event_handler(EventHandler::Ptr& ptr);
+         void add_event_handler(EventHandler::APtr& ptr);
 
          bool active() const;
          void run();
@@ -70,7 +70,7 @@ namespace AV
          size_t audio_written;
          std::mutex avlock;
 
-         std::list<EventHandler::Ptr> event_handlers;
+         std::list<EventHandler::APtr> event_handlers;
          EventHandler::Event next_event();
 
          volatile bool threads_active;
@@ -80,8 +80,8 @@ namespace AV
          std::thread video_thread;
          std::thread audio_thread;
 
-         void process_video(AVPacket&, AV::Video::Display::Ptr&);
-         void process_audio(AVPacket&, AV::Audio::Stream<int16_t>::Ptr&);
+         void process_video(AVPacket&, AV::Video::Display::APtr&&);
+         void process_audio(AVPacket&, AV::Audio::Stream<int16_t>::APtr&&);
 
          void video_thread_fn();
          void audio_thread_fn();

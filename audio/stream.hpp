@@ -15,7 +15,7 @@ namespace AV {
 namespace Audio 
 {
    template<class T>
-   class Stream : public General::SharedVirtual<Stream<T>>
+   class Stream : public General::SharedAbstract<Stream<T>>
    {
       public:
          Stream() : m_callback(nullptr), m_saved_callback(NULL) {}

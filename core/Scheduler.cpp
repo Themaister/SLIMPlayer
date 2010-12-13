@@ -53,7 +53,7 @@ namespace AV
       auto event = EventHandler::Event::None;
 
       std::for_each(event_handlers.begin(), event_handlers.end(), 
-            [&event](EventHandler::Ptr& handler) 
+            [&event](EventHandler::APtr& handler) 
             {
                handler->poll();
                auto evnt = handler->event();
@@ -135,7 +135,7 @@ namespace AV
       return timebase;
    }
 
-   void Scheduler::process_video(AVPacket& pkt, Display::Ptr& vid)
+   void Scheduler::process_video(AVPacket& pkt, Display::APtr&& vid)
    {
       if (!has_video)
          return;
@@ -204,7 +204,7 @@ namespace AV
       }
    }
 
-   void Scheduler::process_audio(AVPacket& pkt, Stream<int16_t>::Ptr& aud)
+   void Scheduler::process_audio(AVPacket& pkt, Stream<int16_t>::APtr&& aud)
    {
       if (!has_audio)
          return;
@@ -244,7 +244,7 @@ namespace AV
    // Video thread
    void Scheduler::video_thread_fn()
    {
-      Display::Ptr vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
+      auto vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
 
       // Add event handler for GL.
       avlock.lock();
@@ -266,7 +266,7 @@ namespace AV
    // Audio thread
    void Scheduler::audio_thread_fn()
    {
-      Stream<int16_t>::Ptr aud = RSound<int16_t>::shared("localhost", file->audio().channels, file->audio().rate);
+      auto aud = RSound<int16_t>::shared("localhost", file->audio().channels, file->audio().rate);
 
       while (threads_active)
       {
