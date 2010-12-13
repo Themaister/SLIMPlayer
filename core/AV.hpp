@@ -26,7 +26,7 @@ namespace AV
          mutable std::mutex lock;
    };
 
-   class EventHandler : public General::Shared<EventHandler>
+   class EventHandler : public General::SharedVirtual<EventHandler>
    {
       public:
          enum class Event : unsigned
@@ -59,8 +59,6 @@ namespace AV
 
       private:
          FF::MediaFile::Ptr file;
-         AV::Audio::Stream<int16_t>::Ptr audio;
-         AV::Video::Display::Ptr video;
          bool has_video;
          bool has_audio;
          bool is_active;

@@ -12,7 +12,7 @@ namespace AV {
 namespace Audio {
 
 template <class T>
-class RSound : public Stream<T>
+class RSound : public Stream<T>, public General::Shared<RSound<T>>
 {
    public:
       RSound(std::string server, int channels, int samplerate, int buffersize = 8092, int latency = 0) : thread_active(false), m_chan(channels)

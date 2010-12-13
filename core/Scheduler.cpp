@@ -244,11 +244,11 @@ namespace AV
    // Video thread
    void Scheduler::video_thread_fn()
    {
-      Display::Ptr vid = std::make_shared<GL>(file->video().width, file->video().height, file->video().aspect_ratio);
+      Display::Ptr vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
 
       // Add event handler for GL.
       avlock.lock();
-      event_handlers.push_back(std::make_shared<GLEvent>());
+      event_handlers.push_back(GLEvent::shared());
       avlock.unlock();
 
       while (threads_active)
@@ -266,7 +266,7 @@ namespace AV
    // Audio thread
    void Scheduler::audio_thread_fn()
    {
-      Stream<int16_t>::Ptr aud = std::make_shared<RSound<int16_t>>("localhost", file->audio().channels, file->audio().rate);
+      Stream<int16_t>::Ptr aud = RSound<int16_t>::shared("localhost", file->audio().channels, file->audio().rate);
 
       while (threads_active)
       {

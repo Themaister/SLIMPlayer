@@ -7,9 +7,21 @@
 namespace General
 {
    template <class T>
-   struct Shared
+   struct SharedVirtual
    {
       typedef std::shared_ptr<T> Ptr;
+   };
+
+   template <class T>
+   struct Shared : public SharedVirtual<T>
+   {
+      typedef typename SharedVirtual<T>::Ptr Ptr;
+
+      template <class... P>
+      static Ptr shared(P&&... args) 
+      { 
+         return std::make_shared<T>(std::forward<P>(args)...); 
+      }
    };
 
    template<class T>

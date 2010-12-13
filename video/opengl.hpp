@@ -11,7 +11,7 @@
 namespace AV {
 namespace Video {
 
-   class GL : public Display
+   class GL : public Display, public General::Shared<GL>
    {
       public:
          GL(unsigned in_width, unsigned in_height, float in_aspect_ratio);
@@ -49,7 +49,7 @@ namespace Video {
          static int get_alignment(int pitch);
    };
 
-   class GLEvent : public AV::EventHandler
+   class GLEvent : public AV::EventHandler, public General::Shared<GLEvent>
    {
       public:
          GLEvent();

@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 
    try
    {
-      MediaFile::Ptr media_file = std::make_shared<MediaFile>(argv[1]);
+      auto media_file = MediaFile::shared(argv[1]);
       
       AV::Scheduler sched(media_file);
 

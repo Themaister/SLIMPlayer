@@ -8,7 +8,7 @@
 namespace AV {
 namespace Video {
 
-   class Display : public General::Shared<Display>
+   class Display : public General::SharedVirtual<Display>
    {
       public:
          Display() {}
