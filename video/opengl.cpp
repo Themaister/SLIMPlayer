@@ -297,7 +297,8 @@ void GL::uninit_cg()
 namespace Internal
 {
    static const std::vector<std::pair<int, EventHandler::Event>> glfw_cmd = {
-      {GLFW_KEY_ESC, EventHandler::Event::Quit}
+      {GLFW_KEY_ESC, EventHandler::Event::Quit},
+      {GLFW_KEY_SPACE, EventHandler::Event::Pause}
    };
 
    static auto current_event = EventHandler::Event::None;
@@ -338,7 +339,7 @@ GLEvent::GLEvent()
 void GLEvent::poll()
 {
    // Need to do this in same thread as GL. :(
-   //glfwPollEvents();
+   glfwPollEvents();
 }
 
 EventHandler::Event GLEvent::event()

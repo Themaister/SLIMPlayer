@@ -20,6 +20,7 @@ namespace AV
          void push(FF::Packet&& in);
          FF::Packet pull();
          size_t size() const;
+         void clear();
 
       private:
          std::queue<FF::Packet> queue;
@@ -68,6 +69,7 @@ namespace AV
          double audio_pts_ts;
          double video_pts_ts;
          size_t audio_written;
+         volatile bool is_paused;
          std::mutex avlock;
 
          std::list<EventHandler::APtr> event_handlers;
@@ -82,6 +84,7 @@ namespace AV
 
          void process_video(AVPacket&, AV::Video::Display::APtr&&);
          void process_audio(AVPacket&, AV::Audio::Stream<int16_t>::APtr&&);
+         void pause_toggle();
 
          void video_thread_fn();
          void audio_thread_fn();

@@ -14,7 +14,7 @@ using namespace AV::Video;
 
 namespace AV
 {
-   Scheduler::Scheduler(MediaFile::Ptr in_file) : file(in_file), is_active(true), video_pts(0.0), audio_pts(0.0), audio_pts_ts(get_time()), video_pts_ts(get_time()), audio_written(0)
+   Scheduler::Scheduler(MediaFile::Ptr in_file) : file(in_file), is_active(true), video_pts(0.0), audio_pts(0.0), audio_pts_ts(get_time()), video_pts_ts(get_time()), audio_written(0), is_paused(false)
    {
       has_video = file->video().active;
       has_audio = file->audio().active;
@@ -55,13 +55,20 @@ namespace AV
       std::for_each(event_handlers.begin(), event_handlers.end(), 
             [&event](EventHandler::APtr& handler) 
             {
-               handler->poll();
+               //handler->poll();
                auto evnt = handler->event();
 
                if (event == EventHandler::Event::None)
                   event = evnt;
             });
       return event;
+   }
+
+   void Scheduler::pause_toggle()
+   {
+      avlock.lock();
+      is_paused = !is_paused;
+      avlock.unlock();
    }
 
    void Scheduler::run()
@@ -76,8 +83,20 @@ namespace AV
             std::cerr << "Quitting!!!" << std::endl;
             is_active = false;
             break;
+
+         case EventHandler::Event::Pause:
+            std::cerr << "Pause toggling stream!!!" << std::endl;
+            pause_toggle();
+            break;
+
          default:
             break;
+      }
+
+      if (is_paused)
+      {
+         sync_sleep(0.01);
+         return;
       }
 
       Packet pkt;
@@ -94,10 +113,16 @@ namespace AV
             return;
 
          case Packet::Type::Audio:
+            while (aud_pkt_queue.size() > 16)
+               sync_sleep(0.01);
+
             aud_pkt_queue.push(std::move(pkt));
             break;
 
          case Packet::Type::Video:
+            while (vid_pkt_queue.size() > 16)
+               sync_sleep(0.01);
+
             vid_pkt_queue.push(std::move(pkt));
             break;
 
@@ -245,21 +270,25 @@ namespace AV
    void Scheduler::video_thread_fn()
    {
       auto vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
+      auto event = GLEvent::shared();
 
       // Add event handler for GL.
       avlock.lock();
-      event_handlers.push_back(GLEvent::shared());
+      event_handlers.push_back(event);
       avlock.unlock();
 
       while (threads_active)
       {
-         if (vid_pkt_queue.size() > 0)
+         if (vid_pkt_queue.size() > 0 && !is_paused)
          {
             Packet pkt = vid_pkt_queue.pull();
             process_video(pkt.get(), vid);
          }
          else
-            usleep(10000);
+         {
+            event->poll(); 
+            sync_sleep(0.01);
+         }
       }
    }
 
@@ -270,6 +299,15 @@ namespace AV
 
       while (threads_active)
       {
+         if (is_paused)
+         {
+            aud->pause();
+            while (is_paused)
+               sync_sleep(0.01);
+
+            aud->unpause();
+         }
+
          if (aud_pkt_queue.size() > 0)
          {
             Packet pkt = aud_pkt_queue.pull();
