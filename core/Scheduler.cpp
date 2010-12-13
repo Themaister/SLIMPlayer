@@ -89,6 +89,34 @@ namespace AV
             pause_toggle();
             break;
 
+         case EventHandler::Event::SeekBack10:
+            std::cerr << "Seeking backwards!!!" << std::endl;
+            avlock.lock();
+            aud_pkt_queue.clear();
+            vid_pkt_queue.clear();
+            is_paused = true;
+
+            file->seek(audio_pts, -10.0);
+            video_pts -= 10.0;
+            audio_pts -= 10.0;
+            avlock.unlock();
+            is_paused = false;
+            break;
+
+         case EventHandler::Event::SeekForward10:
+            std::cerr << "Seeking forward!!!" << std::endl;
+            avlock.lock();
+            aud_pkt_queue.clear();
+            vid_pkt_queue.clear();
+            is_paused = true;
+
+            file->seek(audio_pts, 10.0);
+            video_pts += 10.0;
+            audio_pts += 10.0;
+            avlock.unlock();
+            is_paused = false;
+            break;
+
          default:
             break;
       }

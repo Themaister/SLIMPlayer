@@ -190,6 +190,19 @@ namespace FF
          vid_info.active = false;
    }
 
+   void MediaFile::seek(double pts, double rel)
+   {
+      int flags = (rel < 0.0) ? AVSEEK_FLAG_BACKWARD : 0;
+
+      if (av_seek_frame(fctx, -1, (pts + rel) * AV_TIME_BASE, flags) < 0)
+         throw std::runtime_error("av_seek_frame() failed");
+
+      if (acodec)
+         avcodec_flush_buffers(actx);
+      if (vcodec)
+         avcodec_flush_buffers(vctx);
+   }
+
    const MediaFile::audio_info& MediaFile::audio() const
    {
       return aud_info;

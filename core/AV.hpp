@@ -34,7 +34,8 @@ namespace AV
          {
             Pause,
             Quit,
-            Seek,
+            SeekBack10,
+            SeekForward10,
             None,
          };
 

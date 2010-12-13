@@ -298,7 +298,9 @@ namespace Internal
 {
    static const std::vector<std::pair<int, EventHandler::Event>> glfw_cmd = {
       {GLFW_KEY_ESC, EventHandler::Event::Quit},
-      {GLFW_KEY_SPACE, EventHandler::Event::Pause}
+      {GLFW_KEY_SPACE, EventHandler::Event::Pause},
+      {GLFW_KEY_LEFT, EventHandler::Event::SeekBack10},
+      {GLFW_KEY_RIGHT, EventHandler::Event::SeekForward10},
    };
 
    static auto current_event = EventHandler::Event::None;
