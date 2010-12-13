@@ -41,7 +41,7 @@ ssize_t Resampler::read(float *out, size_t samples)
       ssize_t size = callback->read(&data);
       if (size <= 0)
          return size;
-      if (data == NULL)
+      if (data == nullptr)
          return -1;
 
       buf.insert(buf.end(), data, data + size);

@@ -24,8 +24,8 @@ namespace Video {
 
          ~GL();
       private:
-         unsigned width;
-         unsigned height;
+         uintptr_t width;
+         uintptr_t height;
          float aspect_ratio;
          bool cg_inited;
 

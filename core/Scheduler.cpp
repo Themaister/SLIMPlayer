@@ -114,7 +114,7 @@ namespace AV
       tv.tv_sec = nsecs / 1000000000;
       tv.tv_nsec = nsecs % 1000000000;
 
-      nanosleep(&tv, NULL);
+      nanosleep(&tv, nullptr);
    }
 
    // Unix/Linux specific.

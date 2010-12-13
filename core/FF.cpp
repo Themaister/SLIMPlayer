@@ -52,7 +52,7 @@ namespace FF
    FFMPEG::~FFMPEG()
    {}
 
-   Packet::Packet() : pkt(NULL)
+   Packet::Packet() : pkt(nullptr)
    {
       //std::cerr << "Packet()" << std::endl;
       pkt = (AVPacket*)av_mallocz(sizeof(AVPacket));
@@ -68,11 +68,11 @@ namespace FF
          av_freep(&pkt);
 
       pkt = in_pkt.pkt;
-      in_pkt.pkt = NULL;
+      in_pkt.pkt = nullptr;
       return *this;
    }
 
-   Packet::Packet(Packet&& in_pkt) : pkt(NULL)
+   Packet::Packet(Packet&& in_pkt) : pkt(nullptr)
    {
       //std::cerr << "Packet(&&)" << std::endl;
       *this = std::move(in_pkt);
@@ -80,8 +80,8 @@ namespace FF
 
    AVPacket& Packet::get()
    {
-      if (pkt == NULL)
-         throw std::runtime_error("Trying to dereference NULL\n");
+      if (pkt == nullptr)
+         throw std::runtime_error("Trying to dereference nullptr\n");
 
       //std::cerr << "get()" << std::endl;
       return *pkt;
@@ -97,12 +97,12 @@ namespace FF
          av_freep(&pkt);
    }
 
-   MediaFile::MediaFile(const char *path) : vcodec(NULL), acodec(NULL), actx(NULL), vctx(NULL), fctx(NULL), vid_stream(-1), aud_stream(-1)
+   MediaFile::MediaFile(const char *path) : vcodec(nullptr), acodec(NULL), actx(NULL), vctx(NULL), fctx(NULL), vid_stream(-1), aud_stream(-1)
    {
-      if (path == NULL)
+      if (path == nullptr)
          throw std::runtime_error("Got null-path\n");
 
-      if (av_open_input_file(&fctx, path, NULL, 0, NULL) != 0)
+      if (av_open_input_file(&fctx, path, nullptr, 0, NULL) != 0)
          throw std::runtime_error("Failed to open file\n");
 
       if (av_find_stream_info(fctx) < 0)

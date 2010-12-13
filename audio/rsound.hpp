@@ -100,7 +100,7 @@ class RSound : public Stream<T>
          }
       }
 
-      void set_audio_callback(ssize_t (*cb)(T*, size_t, void*), void *data = NULL)
+      void set_audio_callback(ssize_t (*cb)(T*, size_t, void*), void *data = nullptr)
       {
          Stream<T>::set_audio_callback(cb, data);
 
