@@ -72,6 +72,7 @@ namespace AV
          size_t audio_written;
          volatile bool is_paused;
          std::mutex avlock;
+         std::mutex audio_lock;
 
          std::list<EventHandler::APtr> event_handlers;
          EventHandler::Event next_event();
@@ -82,6 +83,7 @@ namespace AV
 
          std::thread video_thread;
          std::thread audio_thread;
+         Audio::Stream<int16_t>::APtr audio;
 
          void process_video(AVPacket&, AV::Video::Display::APtr&&);
          void process_audio(AVPacket&, AV::Audio::Stream<int16_t>::APtr&&);

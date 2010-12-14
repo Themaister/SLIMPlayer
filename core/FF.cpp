@@ -194,11 +194,24 @@ namespace FF
          vid_info.active = false;
    }
 
-   void MediaFile::seek(double pts, double rel)
+   void MediaFile::seek(double video_pts, double audio_pts, double rel)
    {
       int flags = (rel < 0.0) ? AVSEEK_FLAG_BACKWARD : 0;
 
-      if (av_seek_frame(fctx, -1, (pts + rel) * AV_TIME_BASE, flags) < 0)
+      double seek_to = 0.0;
+      int stream = -1;
+      if (vid_stream >= 0)
+      {
+         stream = vid_stream;
+         seek_to = (video_pts + rel) / av_q2d(fctx->streams[vid_stream]->time_base);
+      }
+      else if (aud_stream >= 0)
+      {
+         stream = aud_stream;
+         seek_to = (audio_pts + rel) / av_q2d(fctx->streams[aud_stream]->time_base);
+      }
+
+      if (av_seek_frame(fctx, stream, seek_to, flags) < 0)
          throw std::runtime_error("av_seek_frame() failed");
 
       if (acodec)

@@ -7,6 +7,7 @@
 #define GL_GLEXT_PROTOTYPES
 #include <Cg/cg.h>
 #include <GL/glfw.h>
+#include <pthread.h>
 
 namespace AV {
 namespace Video {
@@ -55,6 +56,9 @@ namespace Video {
          GLEvent();
          Event event();
          void poll();
+      private:
+         // Find C++0x solution for this!
+         pthread_t thr;
    };
 
 }}

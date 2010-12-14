@@ -59,7 +59,7 @@ namespace AV
       std::for_each(event_handlers.begin(), event_handlers.end(), 
             [&event](EventHandler::APtr& handler) 
             {
-               //handler->poll();
+               handler->poll();
                auto evnt = handler->event();
 
                if (event == EventHandler::Event::None)
@@ -98,11 +98,25 @@ namespace AV
             avlock.lock();
             aud_pkt_queue.clear();
             vid_pkt_queue.clear();
-            is_paused = true;
 
-            file->seek(audio_pts, -10.0);
+            if (has_audio)
+            {
+               audio_lock.lock();
+               audio->pause();
+               audio_lock.unlock();
+            }
+
+            file->seek(video_pts, audio_pts, -10.0);
             video_pts = -10;
             audio_written -= file->audio().rate * file->audio().channels * 10 * 2;
+
+            if (has_audio)
+            {
+               audio_lock.lock();
+               audio->unpause();
+               audio_lock.unlock();
+            }
+
             avlock.unlock();
             is_paused = false;
             break;
@@ -112,11 +126,25 @@ namespace AV
             avlock.lock();
             aud_pkt_queue.clear();
             vid_pkt_queue.clear();
-            is_paused = true;
 
-            file->seek(audio_pts, 10.0);
+            if (has_audio)
+            {
+               audio_lock.lock();
+               audio->pause();
+               audio_lock.unlock();
+            }
+
+            file->seek(video_pts, audio_pts, 10.0);
             video_pts += 10;
             audio_written += file->audio().rate * file->audio().channels * 10 * 2;
+
+            if (has_audio)
+            {
+               audio_lock.lock();
+               audio->unpause();
+               audio_lock.unlock();
+            }
+
             avlock.unlock();
             is_paused = false;
             break;
@@ -145,6 +173,7 @@ namespace AV
             return;
 
          case Packet::Type::Audio:
+            // Bad mmay? :) Temporary hack.
             while (aud_pkt_queue.size() > 64)
                sync_sleep(0.01);
 
@@ -225,14 +254,22 @@ namespace AV
 
          avlock.lock();
          delta -= audio_pts_ts;
-         std::cout << "Delta: " << delta << std::endl;
          double sleep_time = video_pts - (audio_pts + delta);
          avlock.unlock();
+
+         // Yes, it can happen! :(
+         if (delta < 0.0)
+            delta = 0.0;
+         std::cout << "Delta: " << delta << std::endl;
 
          if (video_pts > (audio_pts + delta))
          {
             double last_frame_delta = get_time();
             last_frame_delta -= video_pts_ts;
+
+            // :(
+            if (last_frame_delta < 0.0)
+               last_frame_delta = 0.0;
 
             // We try to keep the sleep time to a somewhat small value to avoid choppy video in some cases.
             // Max sleep time should be a bit over 1 frame time to allow audio to catch up.
@@ -277,11 +314,14 @@ namespace AV
          if (out_size <= 0)
             continue;
 
+         audio_lock.lock();
          aud->write(&buf[0], out_size / 2);
+         audio_lock.unlock();
+
+         avlock.lock();
          audio_written += out_size;
 
          // Update Audio timestamp. Doesn't use the actual audio pts, but I really doubt we'll need that. PCM is PCM after all :)
-         avlock.lock();
 
          if (pkt.pts != (int64_t)AV_NOPTS_VALUE)
          {
@@ -336,6 +376,7 @@ namespace AV
    void Scheduler::audio_thread_fn()
    {
       auto aud = RSound<int16_t>::shared("localhost", file->audio().channels, file->audio().rate);
+      audio = aud;
 
       while (threads_active)
       {

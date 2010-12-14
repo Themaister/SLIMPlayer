@@ -332,7 +332,7 @@ namespace Internal
    }
 }
 
-GLEvent::GLEvent()
+GLEvent::GLEvent() : thr(pthread_self())
 {
    glfwSetKeyCallback(Internal::keypress_cb);
    glfwSetWindowCloseCallback(Internal::winclose_cb);
@@ -341,7 +341,8 @@ GLEvent::GLEvent()
 void GLEvent::poll()
 {
    // Need to do this in same thread as GL. :(
-   glfwPollEvents();
+   if (pthread_equal(pthread_self(), thr))
+      glfwPollEvents();
 }
 
 EventHandler::Event GLEvent::event()
