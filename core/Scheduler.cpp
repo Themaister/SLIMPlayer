@@ -1,3 +1,6 @@
+// Seem to be some libstdc++ issue for now.
+#define _GLIBCXX_USE_NANOSLEEP
+
 #include "FF.hpp"
 #include "AV.hpp"
 #include "audio/rsound.hpp"
@@ -5,7 +8,8 @@
 #include <iostream>
 #include <array>
 #include <memory>
-#include <time.h>
+#include <thread>
+#include <chrono>
 #include <algorithm>
 
 using namespace FF;
@@ -159,23 +163,17 @@ namespace AV
       }
    }
 
-   // Unix/Linux specific.
    void Scheduler::sync_sleep(float secs)
    {
-      int64_t nsecs = (int64_t)(secs * 1000000000);
-      struct timespec tv;
-      tv.tv_sec = nsecs / 1000000000;
-      tv.tv_nsec = nsecs % 1000000000;
-
-      nanosleep(&tv, nullptr);
+      std::this_thread::sleep_for(std::chrono::nanoseconds((int64_t)(secs * 1000000000)));
    }
 
-   // Unix/Linux specific.
    double Scheduler::get_time()
    {
-      struct timespec tv;
-      clock_gettime(CLOCK_MONOTONIC, &tv);
-      return (double)tv.tv_sec + (double)tv.tv_nsec / 1000000000.0;
+      auto clock = std::chrono::monotonic_clock::now();
+      std::chrono::nanoseconds time = clock.time_since_epoch();
+      double secs = time.count() * 0.000000001;
+      return secs;
    }
 
    double Scheduler::time_base() const
