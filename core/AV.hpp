@@ -90,9 +90,9 @@ namespace AV
          void video_thread_fn();
          void audio_thread_fn();
 
+         double frame_time() const;
          static void sync_sleep(float time);
          static double get_time();
-         double time_base() const;
    };
 }
 

@@ -81,6 +81,7 @@ namespace FF
             unsigned channels;
             unsigned rate;
             bool active;
+            AVRational time_base;
             AVCodecContext *ctx;
          };
 
@@ -90,6 +91,7 @@ namespace FF
             unsigned height;
             float aspect_ratio;
             bool active;
+            AVRational time_base;
             AVCodecContext *ctx;
          };
 

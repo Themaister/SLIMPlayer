@@ -101,8 +101,8 @@ namespace AV
             is_paused = true;
 
             file->seek(audio_pts, -10.0);
-            video_pts -= 10.0;
-            audio_pts -= 10.0;
+            video_pts = -10;
+            audio_written -= file->audio().rate * file->audio().channels * 10 * 2;
             avlock.unlock();
             is_paused = false;
             break;
@@ -115,8 +115,8 @@ namespace AV
             is_paused = true;
 
             file->seek(audio_pts, 10.0);
-            video_pts += 10.0;
-            audio_pts += 10.0;
+            video_pts += 10;
+            audio_written += file->audio().rate * file->audio().channels * 10 * 2;
             avlock.unlock();
             is_paused = false;
             break;
@@ -145,14 +145,14 @@ namespace AV
             return;
 
          case Packet::Type::Audio:
-            while (aud_pkt_queue.size() > 16)
+            while (aud_pkt_queue.size() > 64)
                sync_sleep(0.01);
 
             aud_pkt_queue.push(std::move(pkt));
             break;
 
          case Packet::Type::Video:
-            while (vid_pkt_queue.size() > 16)
+            while (vid_pkt_queue.size() > 64)
                sync_sleep(0.01);
 
             vid_pkt_queue.push(std::move(pkt));
@@ -176,14 +176,12 @@ namespace AV
       return secs;
    }
 
-   double Scheduler::time_base() const
+   double Scheduler::frame_time() const
    {
-      float timebase = file->video().ctx->ticks_per_frame * av_q2d(file->video().ctx->time_base);
-      // FFmpeg hack :(
-      if (file->video().ctx->time_base.den > 1000 && file->video().ctx->time_base.num == 1)
-         timebase *= 1000.0;
-
-      return timebase;
+      double frame_time = av_q2d(file->video().ctx->time_base) * file->video().ctx->ticks_per_frame;
+      if (file->video().ctx->time_base.num == 1 && file->video().ctx->time_base.den > 1000)
+         frame_time *= 1000.0;
+      return frame_time;
    }
 
    void Scheduler::process_video(AVPacket& pkt, Display::APtr&& vid)
@@ -207,18 +205,17 @@ namespace AV
          pts = pkt.dts;
       }
 
-      // We're not using this value atm... It doesn't seem quite right.
-      pts *= time_base();
-      // This PTS value seems to be bogus when you compare it to audio PTS!
-      // PTS sometimes doesn't increase either after one finished iteration (?!?!).
-
-      // If we got a finished frame, show it to the screen. :)
-      // Always seems to be finished for some strange reason.
       if (finished)
       {
+         std::cout << "Video PTS: " << pkt.pts * av_q2d(file->video().time_base) << std::endl;
          // I really doubt this will work with variable FPS, but hey. This approach seems to work well for the videos I've tested so far.
-         video_pts += time_base();
-         video_pts += frame->repeat_pict / (2.0 * time_base());
+         //
+         if (pts != AV_NOPTS_VALUE)
+            video_pts = pts * av_q2d(file->video().time_base);
+         else
+            video_pts += frame_time();
+
+         video_pts += frame->repeat_pict / (2.0 * frame_time());
 
          vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
 
@@ -228,6 +225,7 @@ namespace AV
 
          avlock.lock();
          delta -= audio_pts_ts;
+         std::cout << "Delta: " << delta << std::endl;
          double sleep_time = video_pts - (audio_pts + delta);
          avlock.unlock();
 
@@ -238,7 +236,7 @@ namespace AV
 
             // We try to keep the sleep time to a somewhat small value to avoid choppy video in some cases.
             // Max sleep time should be a bit over 1 frame time to allow audio to catch up.
-            double max_sleep = 1.5 * time_base() - last_frame_delta;
+            double max_sleep = 1.2 * frame_time() - last_frame_delta;
 
             if (max_sleep < 0.0)
                max_sleep = 0.0;
@@ -247,6 +245,7 @@ namespace AV
             {
                sleep_time = max_sleep;
             }
+            std::cout << "Sleep for " << sleep_time << std::endl;
             sync_sleep(sleep_time);
          }
 
@@ -283,7 +282,22 @@ namespace AV
 
          // Update Audio timestamp. Doesn't use the actual audio pts, but I really doubt we'll need that. PCM is PCM after all :)
          avlock.lock();
-         audio_pts = (float)audio_written/(file->audio().rate * file->audio().channels * 2) - aud->delay();
+
+         if (pkt.pts != (int64_t)AV_NOPTS_VALUE)
+         {
+            audio_pts = pkt.pts * av_q2d(file->audio().time_base) - aud->delay();
+         }
+         else if (pkt.dts != (int64_t)AV_NOPTS_VALUE)
+         {
+            audio_pts = pkt.dts * av_q2d(file->audio().time_base) - aud->delay();
+         }
+         else
+         {
+            audio_pts = (double)audio_written/(file->audio().rate * file->audio().channels * 2) - aud->delay();
+            std::cerr << "Couldn't get audio pts nor dts. Guessing!" << std::endl;
+         }
+         std::cout << "Audio PTS: " << audio_pts << std::endl;
+
          audio_pts_ts = get_time();
          avlock.unlock();
       }

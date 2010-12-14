@@ -170,6 +170,7 @@ namespace FF
          aud_info.channels = actx->channels;
          aud_info.rate = actx->sample_rate;
          aud_info.active = true;
+         aud_info.time_base = fctx->streams[aud_stream]->time_base;
          aud_info.ctx = actx;
       }
       else
@@ -179,8 +180,11 @@ namespace FF
       {
          vid_info.width = vctx->width;
          vid_info.height = vctx->height;
+
+         // TODO: Fix me.
          vid_info.aspect_ratio = (float)vctx->width / vctx->height;
          vid_info.active = true;
+         vid_info.time_base = fctx->streams[vid_stream]->time_base;
          vid_info.ctx = vctx;
 
          vctx->get_buffer = Internal::get_buffer;
