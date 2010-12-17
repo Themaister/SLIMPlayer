@@ -24,9 +24,6 @@ namespace AV
       has_audio = file->audio().active;
 
       if (has_video)
-         frame = avcodec_alloc_frame();
-
-      if (has_video)
       {
          video_thread_active = true;
          video_thread = std::thread(&Scheduler::video_thread_fn, this);
@@ -48,8 +45,6 @@ namespace AV
       if (has_audio)
          audio_thread.join();
 
-      if (has_video)
-         av_free(frame);
    }
 
    bool Scheduler::active() const
@@ -236,7 +231,7 @@ namespace AV
       return frame_time;
    }
 
-   void Scheduler::process_video(AVPacket& pkt, Display::APtr&& vid)
+   void Scheduler::process_video(AVPacket& pkt, Display::APtr&& vid, AVFrame *frame)
    {
       if (!has_video)
          return;
@@ -376,6 +371,8 @@ namespace AV
       auto vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
       auto event = GLEvent::shared();
 
+      AVFrame *frame = avcodec_alloc_frame();
+
       // Add event handler for GL.
       avlock.lock();
       event_handlers.push_back(event);
@@ -386,7 +383,7 @@ namespace AV
          if (vid_pkt_queue.size() > 0 && !is_paused)
          {
             Packet pkt = vid_pkt_queue.pull();
-            process_video(pkt.get(), vid);
+            process_video(pkt.get(), vid, frame);
          }
          else
          {
@@ -395,6 +392,7 @@ namespace AV
          }
       }
       video_thread_active = false;
+      av_free(frame);
    }
 
    // Audio thread

@@ -70,7 +70,6 @@ namespace AV
          bool has_video;
          bool has_audio;
          bool is_active;
-         AVFrame *frame;
          double video_pts;
          double audio_pts;
          double audio_pts_ts;
@@ -97,7 +96,7 @@ namespace AV
 
          void perform_seek(double delta);
 
-         void process_video(AVPacket&, AV::Video::Display::APtr&&);
+         void process_video(AVPacket&, AV::Video::Display::APtr&&, AVFrame*);
          void process_audio(AVPacket&, AV::Audio::Stream<int16_t>::APtr&&);
          void pause_toggle();
 
