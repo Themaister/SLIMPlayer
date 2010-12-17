@@ -1,4 +1,4 @@
-TARGET = slimplay
+TARGET = muplay
 
 TARGET_SRC := $(wildcard */*.cpp)
 TARGET_OBJ := $(TARGET_SRC:.cpp=.o)
