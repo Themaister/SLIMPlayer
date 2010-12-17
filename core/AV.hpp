@@ -17,14 +17,18 @@ namespace AV
    class PacketQueue
    {
       public:
+         PacketQueue();
          void push(FF::Packet&& in);
          FF::Packet pull();
          size_t size() const;
          void clear();
+         void finalize();
+         bool alive() const;
 
       private:
          std::queue<FF::Packet> queue;
          mutable std::mutex lock;
+         bool is_final;
    };
 
    class EventHandler : public General::SharedAbstract<EventHandler>
@@ -36,6 +40,8 @@ namespace AV
             Quit,
             SeekBack10,
             SeekForward10,
+            SeekBack60,
+            SeekForward60,
             None,
          };
 
@@ -80,7 +86,8 @@ namespace AV
          std::list<EventHandler::APtr> event_handlers;
          EventHandler::Event next_event();
 
-         volatile bool threads_active;
+         volatile bool video_thread_active;
+         volatile bool audio_thread_active;
          PacketQueue vid_pkt_queue;
          PacketQueue aud_pkt_queue;
 

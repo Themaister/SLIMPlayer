@@ -301,6 +301,8 @@ namespace Internal
       {GLFW_KEY_SPACE, EventHandler::Event::Pause},
       {GLFW_KEY_LEFT, EventHandler::Event::SeekBack10},
       {GLFW_KEY_RIGHT, EventHandler::Event::SeekForward10},
+      {GLFW_KEY_UP, EventHandler::Event::SeekForward60},
+      {GLFW_KEY_DOWN, EventHandler::Event::SeekBack60}
    };
 
    static auto current_event = EventHandler::Event::None;

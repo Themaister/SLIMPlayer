@@ -106,7 +106,7 @@ namespace FF
          const video_info& video() const;
 
          Packet::Type packet(Packet&);
-         void seek(double video_pts, double audio_pts, double relative, SeekTarget target);
+         void seek(double video_pts, double audio_pts, double relative, SeekTarget target = SeekTarget::Default);
 
       private:
          AVCodec *vcodec;

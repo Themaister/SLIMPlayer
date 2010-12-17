@@ -18,7 +18,7 @@ using namespace AV::Video;
 
 namespace AV
 {
-   Scheduler::Scheduler(MediaFile::Ptr in_file) : file(in_file), is_active(true), video_pts(0.0), audio_pts(0.0), audio_pts_ts(get_time()), video_pts_ts(get_time()), audio_written(0), is_paused(false), audio_pts_hack(false)
+   Scheduler::Scheduler(MediaFile::Ptr in_file) : file(in_file), is_active(true), video_pts(0.0), audio_pts(0.0), audio_pts_ts(get_time()), video_pts_ts(get_time()), audio_written(0), is_paused(false), audio_pts_hack(false), video_thread_active(false), audio_thread_active(false)
    {
       has_video = file->video().active;
       has_audio = file->audio().active;
@@ -26,17 +26,22 @@ namespace AV
       if (has_video)
          frame = avcodec_alloc_frame();
 
-      threads_active = true;
-
       if (has_video)
+      {
+         video_thread_active = true;
          video_thread = std::thread(&Scheduler::video_thread_fn, this);
+      }
       if (has_audio)
+      {
+         audio_thread_active = true;
          audio_thread = std::thread(&Scheduler::audio_thread_fn, this);
+      }
    }
 
    Scheduler::~Scheduler()
    {
-      threads_active = false;
+      video_thread_active = false;
+      audio_thread_active = false;
 
       if (has_video)
          video_thread.join();
@@ -49,7 +54,7 @@ namespace AV
 
    bool Scheduler::active() const
    {
-      return is_active;
+      return is_active || audio_thread_active || video_thread_active;
    }
 
    EventHandler::Event Scheduler::next_event()
@@ -88,17 +93,20 @@ namespace AV
          audio_lock.unlock();
       }
 
-      file->seek(video_pts, audio_pts, time, audio_pts_hack ? FF::SeekTarget::Audio : FF::SeekTarget::Default);
       video_pts += time;
 
+      // We have to seek and be able to calculate what the new audio PTS will be :( :( 
+      // Very dirty, but can't find a better way for now.
       if (audio_pts_hack)
       {
          // We will seek to this absolute time.
-         audio_written = (audio_pts + time) * (file->audio().rate * file->audio().channels * 2);
+         audio_written = ((has_video ? video_pts : audio_pts) + time) * (file->audio().rate * file->audio().channels * 2);
+         file->seek(video_pts, has_video ? video_pts : audio_pts, time, FF::SeekTarget::Audio);
       }
       else
       {
-         audio_written += file->audio().rate * file->audio().channels * 10 * 2;
+         audio_written += file->audio().rate * file->audio().channels * time * 2;
+         file->seek(video_pts, audio_pts, time);
       }
 
       if (has_audio)
@@ -123,6 +131,8 @@ namespace AV
          case EventHandler::Event::Quit:
             std::cerr << "Quitting!!!" << std::endl;
             is_active = false;
+            video_thread_active = false;
+            audio_thread_active = false;
             break;
 
          case EventHandler::Event::Pause:
@@ -140,11 +150,24 @@ namespace AV
             perform_seek(10.0);
             break;
 
-         default:
+         case EventHandler::Event::SeekBack60:
+            std::cerr << "Seeking backwards!!!" << std::endl;
+            perform_seek(-60.0);
             break;
+
+         case EventHandler::Event::SeekForward60:
+            std::cerr << "Seeking forward!!!" << std::endl;
+            perform_seek(60.0);
+            break;
+
+         case EventHandler::Event::None:
+            break;
+
+         default:
+            throw std::runtime_error("Unknown event popped up :V\n");
       }
 
-      if (is_paused)
+      if (is_paused || !is_active)
       {
          sync_sleep(0.01);
          return;
@@ -158,6 +181,9 @@ namespace AV
       {
          case Packet::Type::Error:
             is_active = false;
+            // Signal to threads that there won't be any more data.
+            aud_pkt_queue.finalize();
+            vid_pkt_queue.finalize();
             return;
             
          case Packet::Type::None:
@@ -253,7 +279,7 @@ namespace AV
             delta = 0.0;
          std::cout << "Delta: " << delta << std::endl;
 
-         if (video_pts > (audio_pts + delta))
+         if (video_pts > (audio_pts + delta) && audio_thread_active)
          {
             double last_frame_delta = get_time();
             last_frame_delta -= video_pts_ts;
@@ -349,7 +375,7 @@ namespace AV
       event_handlers.push_back(event);
       avlock.unlock();
 
-      while (threads_active)
+      while (video_thread_active && vid_pkt_queue.alive())
       {
          if (vid_pkt_queue.size() > 0 && !is_paused)
          {
@@ -362,6 +388,7 @@ namespace AV
             sync_sleep(0.01);
          }
       }
+      video_thread_active = false;
    }
 
    // Audio thread
@@ -370,7 +397,7 @@ namespace AV
       auto aud = RSound<int16_t>::shared("localhost", file->audio().channels, file->audio().rate);
       audio = aud;
 
-      while (threads_active)
+      while (audio_thread_active && aud_pkt_queue.alive())
       {
          if (is_paused)
          {
@@ -387,7 +414,11 @@ namespace AV
             process_audio(pkt.get(), aud);
          }
          else
-            usleep(10000);
+         {
+            std::cout << "Sync sleeping!" << std::endl;
+            sync_sleep(0.01);
+         }
       }
+      audio_thread_active = false;
    }
 }
