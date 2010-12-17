@@ -419,7 +419,7 @@ namespace AV
                std::cout << sub.rects[i]->ass << std::endl;
 
                // Push our new message to handler queue. We just handle ASS atm, but hey ;)
-               sub_renderer->push_msg(sub.rects[i]->ass);
+               sub_renderer->push_msg(sub.rects[i]->ass, video_pts);
             }
          }
       }

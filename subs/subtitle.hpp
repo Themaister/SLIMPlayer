@@ -32,7 +32,7 @@ namespace AV
          public:
             virtual ~Renderer() {};
 
-            virtual void push_msg(const std::string& msg) = 0;
+            virtual void push_msg(const std::string& msg, double video_pts) = 0;
             typedef std::list<Message> ListType;
 
             virtual const ListType& msg_list(double timestamp) const = 0;
