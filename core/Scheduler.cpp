@@ -254,7 +254,7 @@ namespace AV
 
       if (finished)
       {
-         std::cout << "Video PTS: " << pkt.pts * av_q2d(file->video().time_base) << std::endl;
+         //std::cout << "Video PTS: " << pkt.pts * av_q2d(file->video().time_base) << std::endl;
          // I really doubt this will work with variable FPS, but hey. This approach seems to work well for the videos I've tested so far.
          //
          if (pts != AV_NOPTS_VALUE)
@@ -278,7 +278,7 @@ namespace AV
          // Yes, it can happen! :(
          if (delta < 0.0)
             delta = 0.0;
-         std::cout << "Delta: " << delta << std::endl;
+         //std::cout << "Delta: " << delta << std::endl;
 
          if (video_pts > (audio_pts + delta) && audio_thread_active)
          {
@@ -300,7 +300,7 @@ namespace AV
             {
                sleep_time = max_sleep;
             }
-            std::cout << "Sleep for " << sleep_time << std::endl;
+            //std::cout << "Sleep for " << sleep_time << std::endl;
             sync_sleep(sleep_time);
          }
 
@@ -352,10 +352,10 @@ namespace AV
          else
          {
             audio_pts = (double)audio_written/(file->audio().rate * file->audio().channels * 2) - aud->delay();
-            std::cerr << "Couldn't get audio pts nor dts. Guessing!" << std::endl;
+            //std::cerr << "Couldn't get audio pts nor dts. Guessing!" << std::endl;
             audio_pts_hack = true;
          }
-         std::cout << "Audio PTS: " << audio_pts << std::endl;
+         //std::cout << "Audio PTS: " << audio_pts << std::endl;
 
          audio_pts_ts = get_time();
          avlock.unlock();
@@ -419,7 +419,7 @@ namespace AV
          }
          else
          {
-            std::cout << "Sync sleeping!" << std::endl;
+            //std::cout << "Sync sleeping!" << std::endl;
             sync_sleep(0.01);
          }
       }
