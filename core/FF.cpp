@@ -97,7 +97,7 @@ namespace FF
          av_freep(&pkt);
    }
 
-   MediaFile::MediaFile(const char *path) : vcodec(nullptr), acodec(NULL), actx(NULL), vctx(NULL), fctx(NULL), vid_stream(-1), aud_stream(-1)
+   MediaFile::MediaFile(const char *path) : vcodec(nullptr), acodec(nullptr), actx(nullptr), vctx(nullptr), sctx(nullptr), fctx(nullptr), vid_stream(-1), aud_stream(-1), sub_stream(-1)
    {
       if (path == nullptr)
          throw std::runtime_error("Got null-path\n");
@@ -121,6 +121,8 @@ namespace FF
          avcodec_close(actx);
       if (vctx)
          avcodec_close(vctx);
+      if (sctx)
+         avcodec_close(sctx);
       if (fctx)
          av_close_input_file(fctx);
    }
@@ -146,6 +148,16 @@ namespace FF
          }
       }
 
+      for (unsigned i = 0; i < fctx->nb_streams; i++)
+      {
+         if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_SUBTITLE)
+         {
+            sub_stream = i;
+            break;
+         }
+      }
+
+
       if (vid_stream >= 0)
       {
          vctx = fctx->streams[vid_stream]->codec;
@@ -160,6 +172,14 @@ namespace FF
          acodec = avcodec_find_decoder(actx->codec_id);
          if (acodec)
             avcodec_open(actx, acodec);
+      }
+
+      if (sub_stream >= 0)
+      {
+         sctx = fctx->streams[sub_stream]->codec;
+         scodec = avcodec_find_decoder(sctx->codec_id);
+         if (scodec)
+            avcodec_open(sctx, scodec);
       }
    }
 
@@ -192,6 +212,14 @@ namespace FF
       }
       else
          vid_info.active = false;
+
+      if (scodec)
+      {
+         sub_info.active = true;
+         sub_info.ctx = sctx;
+      }
+      else
+         sub_info.active = false;
    }
 
    void MediaFile::seek(double video_pts, double audio_pts, double rel, SeekTarget target)
@@ -218,6 +246,8 @@ namespace FF
          avcodec_flush_buffers(actx);
       if (vcodec)
          avcodec_flush_buffers(vctx);
+      if (scodec)
+         avcodec_flush_buffers(sctx);
    }
 
    const MediaFile::audio_info& MediaFile::audio() const
@@ -228,6 +258,11 @@ namespace FF
    const MediaFile::video_info& MediaFile::video() const
    {
       return vid_info;
+   }
+
+   const MediaFile::subtitle_info& MediaFile::sub() const
+   {
+      return sub_info;
    }
 
    Packet::Type MediaFile::packet(Packet& pkt)
@@ -242,6 +277,8 @@ namespace FF
          type = Packet::Type::Audio;
       else if (index == vid_stream)
          type = Packet::Type::Video;
+      else if (index == sub_stream)
+         type = Packet::Type::Subtitle;
 
       return type;
    }

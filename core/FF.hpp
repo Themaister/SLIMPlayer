@@ -59,6 +59,7 @@ namespace FF
             Error = 0x1,
             Audio = 0x2,
             Video = 0x4,
+            Subtitle = 0x8,
          };
 
       private:
@@ -102,8 +103,15 @@ namespace FF
             AVCodecContext *ctx;
          };
 
+         struct subtitle_info
+         {
+            bool active;
+            AVCodecContext *ctx;
+         };
+
          const audio_info& audio() const;
          const video_info& video() const;
+         const subtitle_info& sub() const;
 
          Packet::Type packet(Packet&);
          void seek(double video_pts, double audio_pts, double relative, SeekTarget target = SeekTarget::Default);
@@ -111,13 +119,17 @@ namespace FF
       private:
          AVCodec *vcodec;
          AVCodec *acodec;
+         AVCodec *scodec;
          AVCodecContext *actx;
          AVCodecContext *vctx;
+         AVCodecContext *sctx;
          AVFormatContext *fctx;
          audio_info aud_info;
          video_info vid_info;
+         subtitle_info sub_info;
          int vid_stream;
          int aud_stream;
+         int sub_stream;
 
          void resolve_codecs();
          void set_media_info();

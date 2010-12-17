@@ -4,7 +4,7 @@ TARGET_SRC := $(wildcard */*.cpp)
 TARGET_OBJ := $(TARGET_SRC:.cpp=.o)
 HEADERS := $(wildcard */*.hpp)
 
-LIBS := -lrsound -lglfw -lCg -lCgGL
+LIBS := -lrsound -lglfw -lCg -lCgGL -lass
 FFMPEG_LIBS := -lavutil -lavformat -lavcodec
 INCDIRS := -I. -Icore
 

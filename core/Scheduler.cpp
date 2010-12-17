@@ -12,6 +12,8 @@
 #include <chrono>
 #include <algorithm>
 
+#include <stdio.h>
+
 using namespace FF;
 using namespace AV::Audio;
 using namespace AV::Video;
@@ -205,6 +207,13 @@ namespace AV
             vid_pkt_queue.push(std::move(pkt));
             break;
 
+         case Packet::Type::Subtitle:
+            while (sub_pkt_queue.size() > 64)
+               sync_sleep(0.01);
+
+            sub_pkt_queue.push(std::move(pkt));
+            break;
+
          default:
             throw std::runtime_error("What kind of package is this? o.o\n");
       }
@@ -365,6 +374,59 @@ namespace AV
       pkt.size = pkt_size;
    }
 
+   void Scheduler::process_subtitle()
+   {
+      if (sub_pkt_queue.size() == 0)
+      {
+         return;
+      }
+
+      auto packet = sub_pkt_queue.pull();
+
+      auto& pkt = packet.get();
+
+      uint8_t *data = pkt.data;
+      size_t size = pkt.size;
+
+      int finished = 0;
+      AVSubtitle sub;
+
+      int ret;
+      
+      while (pkt.size > 0)
+      {
+         ret = avcodec_decode_subtitle2(file->sub().ctx, &sub, &finished, &pkt);
+
+         if (ret <= 0)
+         {
+            std::cerr << "Decode subtitle failed." << std::endl;
+            break;
+         }
+
+         pkt.data += ret;
+         pkt.size -= ret;
+      }
+      pkt.data = data;
+      pkt.size = size;
+
+      if (finished)
+      {
+         for (unsigned i = 0; i < sub.num_rects; i++)
+         {
+            if (sub.rects[i]->text)
+               std::cout << sub.rects[i]->text << std::endl;
+            if (sub.rects[i]->ass)
+               std::cout << sub.rects[i]->ass << std::endl;
+         }
+      }
+      else
+      {
+         std::cout << "Did not finish a subtitle frame." << std::endl;
+      }
+
+      avsubtitle_free(&sub);
+   }
+
    // Video thread
    void Scheduler::video_thread_fn()
    {
@@ -380,9 +442,12 @@ namespace AV
 
       while (video_thread_active && vid_pkt_queue.alive())
       {
+         if (file->sub().active)
+            process_subtitle();
+
          if (vid_pkt_queue.size() > 0 && !is_paused)
          {
-            Packet pkt = vid_pkt_queue.pull();
+            auto pkt = vid_pkt_queue.pull();
             process_video(pkt.get(), vid, frame);
          }
          else
@@ -414,7 +479,7 @@ namespace AV
 
          if (aud_pkt_queue.size() > 0)
          {
-            Packet pkt = aud_pkt_queue.pull();
+            auto pkt = aud_pkt_queue.pull();
             process_audio(pkt.get(), aud);
          }
          else
