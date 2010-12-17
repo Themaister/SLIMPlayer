@@ -74,6 +74,9 @@ namespace AV
          std::mutex avlock;
          std::mutex audio_lock;
 
+         // If we never get proper PTS values for audio, we have to "hack" while seeking.
+         bool audio_pts_hack;
+
          std::list<EventHandler::APtr> event_handlers;
          EventHandler::Event next_event();
 
@@ -84,6 +87,8 @@ namespace AV
          std::thread video_thread;
          std::thread audio_thread;
          Audio::Stream<int16_t>::APtr audio;
+
+         void perform_seek(double delta);
 
          void process_video(AVPacket&, AV::Video::Display::APtr&&);
          void process_audio(AVPacket&, AV::Audio::Stream<int16_t>::APtr&&);

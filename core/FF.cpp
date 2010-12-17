@@ -194,13 +194,13 @@ namespace FF
          vid_info.active = false;
    }
 
-   void MediaFile::seek(double video_pts, double audio_pts, double rel)
+   void MediaFile::seek(double video_pts, double audio_pts, double rel, SeekTarget target)
    {
       int flags = (rel < 0.0) ? AVSEEK_FLAG_BACKWARD : 0;
 
       double seek_to = 0.0;
       int stream = -1;
-      if (vid_stream >= 0)
+      if (vid_stream >= 0 && target != SeekTarget::Audio)
       {
          stream = vid_stream;
          seek_to = (video_pts + rel) / av_q2d(fctx->streams[vid_stream]->time_base);

@@ -27,7 +27,6 @@ int main(int argc, char *argv[])
       while (sched.active())
       {
          sched.run();
-         usleep(2000);
       }
    }
    catch (std::exception &e) { std::cerr << e.what() << std::endl; }

@@ -18,7 +18,7 @@ using namespace AV::Video;
 
 namespace AV
 {
-   Scheduler::Scheduler(MediaFile::Ptr in_file) : file(in_file), is_active(true), video_pts(0.0), audio_pts(0.0), audio_pts_ts(get_time()), video_pts_ts(get_time()), audio_written(0), is_paused(false)
+   Scheduler::Scheduler(MediaFile::Ptr in_file) : file(in_file), is_active(true), video_pts(0.0), audio_pts(0.0), audio_pts_ts(get_time()), video_pts_ts(get_time()), audio_written(0), is_paused(false), audio_pts_hack(false)
    {
       has_video = file->video().active;
       has_audio = file->audio().active;
@@ -75,6 +75,43 @@ namespace AV
       avlock.unlock();
    }
 
+   void Scheduler::perform_seek(double time)
+   {
+      avlock.lock();
+      aud_pkt_queue.clear();
+      vid_pkt_queue.clear();
+
+      if (has_audio)
+      {
+         audio_lock.lock();
+         audio->pause();
+         audio_lock.unlock();
+      }
+
+      file->seek(video_pts, audio_pts, time, audio_pts_hack ? FF::SeekTarget::Audio : FF::SeekTarget::Default);
+      video_pts += time;
+
+      if (audio_pts_hack)
+      {
+         // We will seek to this absolute time.
+         audio_written = (audio_pts + time) * (file->audio().rate * file->audio().channels * 2);
+      }
+      else
+      {
+         audio_written += file->audio().rate * file->audio().channels * 10 * 2;
+      }
+
+      if (has_audio)
+      {
+         audio_lock.lock();
+         audio->unpause();
+         audio_lock.unlock();
+      }
+
+      avlock.unlock();
+      is_paused = false;
+   }
+
    void Scheduler::run()
    {
       avlock.lock();
@@ -95,58 +132,12 @@ namespace AV
 
          case EventHandler::Event::SeekBack10:
             std::cerr << "Seeking backwards!!!" << std::endl;
-            avlock.lock();
-            aud_pkt_queue.clear();
-            vid_pkt_queue.clear();
-
-            if (has_audio)
-            {
-               audio_lock.lock();
-               audio->pause();
-               audio_lock.unlock();
-            }
-
-            file->seek(video_pts, audio_pts, -10.0);
-            video_pts = -10;
-            audio_written -= file->audio().rate * file->audio().channels * 10 * 2;
-
-            if (has_audio)
-            {
-               audio_lock.lock();
-               audio->unpause();
-               audio_lock.unlock();
-            }
-
-            avlock.unlock();
-            is_paused = false;
+            perform_seek(-10.0);
             break;
 
          case EventHandler::Event::SeekForward10:
             std::cerr << "Seeking forward!!!" << std::endl;
-            avlock.lock();
-            aud_pkt_queue.clear();
-            vid_pkt_queue.clear();
-
-            if (has_audio)
-            {
-               audio_lock.lock();
-               audio->pause();
-               audio_lock.unlock();
-            }
-
-            file->seek(video_pts, audio_pts, 10.0);
-            video_pts += 10;
-            audio_written += file->audio().rate * file->audio().channels * 10 * 2;
-
-            if (has_audio)
-            {
-               audio_lock.lock();
-               audio->unpause();
-               audio_lock.unlock();
-            }
-
-            avlock.unlock();
-            is_paused = false;
+            perform_seek(10.0);
             break;
 
          default:
@@ -335,6 +326,7 @@ namespace AV
          {
             audio_pts = (double)audio_written/(file->audio().rate * file->audio().channels * 2) - aud->delay();
             std::cerr << "Couldn't get audio pts nor dts. Guessing!" << std::endl;
+            audio_pts_hack = true;
          }
          std::cout << "Audio PTS: " << audio_pts << std::endl;
 

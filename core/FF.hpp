@@ -33,6 +33,13 @@ namespace FF
 {
    void set_global_pts(uint64_t);
 
+   enum class SeekTarget
+   {
+      Video,
+      Audio,
+      Default
+   };
+
    class Packet
    {
       public:
@@ -99,7 +106,7 @@ namespace FF
          const video_info& video() const;
 
          Packet::Type packet(Packet&);
-         void seek(double video_pts, double audio_pts, double relative);
+         void seek(double video_pts, double audio_pts, double relative, SeekTarget target);
 
       private:
          AVCodec *vcodec;
