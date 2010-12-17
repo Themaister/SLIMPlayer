@@ -97,7 +97,7 @@ namespace AV
 
          void perform_seek(double delta);
 
-         void process_subtitle();
+         void process_subtitle(AV::Video::Display::APtr&&, AV::Sub::Renderer::APtr&&);
          void process_video(AVPacket&, AV::Video::Display::APtr&&, AVFrame*);
          void process_audio(AVPacket&, AV::Audio::Stream<int16_t>::APtr&&);
          void pause_toggle();

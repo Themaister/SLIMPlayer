@@ -4,21 +4,26 @@
 #define _STDC_CONSTANT_MACROS 1
 #include "General.hpp"
 #include <stdint.h>
+#include "subs/subtitle.hpp"
 
-namespace AV {
-namespace Video {
-
-   class Display : public General::SharedAbstract<Display>
+namespace AV 
+{
+   namespace Video 
    {
-      public:
-         Display() {}
 
-         virtual void frame(const uint8_t * const * data, const int *pitch, int w, int h) = 0;
-         virtual void flip() = 0;
+      class Display : public General::SharedAbstract<Display>
+      {
+         public:
+            Display() {}
 
-         virtual ~Display() {}
-   };
+            virtual void frame(const uint8_t * const * data, const int *pitch, int w, int h) = 0;
+            virtual void subtitle(const Sub::Message& sub) = 0;
+            virtual void flip() = 0;
 
-}}
+            virtual ~Display() {}
+      };
+
+   }
+}
 
 #endif

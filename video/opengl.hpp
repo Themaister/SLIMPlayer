@@ -4,6 +4,8 @@
 #include "display.hpp"
 #include "AV.hpp"
 
+#include "subs/subtitle.hpp"
+
 #define GL_GLEXT_PROTOTYPES
 #include <Cg/cg.h>
 #include <GL/glfw.h>
@@ -21,6 +23,7 @@ namespace Video {
          void operator=(const GL&) = delete;
 
          void frame(const uint8_t * const * data, const int *pitch, int w, int h);
+         void subtitle(const AV::Sub::Message& msg);
          void flip();
 
          ~GL();

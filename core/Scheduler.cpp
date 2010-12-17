@@ -5,6 +5,7 @@
 #include "AV.hpp"
 #include "audio/rsound.hpp"
 #include "video/opengl.hpp"
+#include "subs/ASSRender.hpp"
 #include <iostream>
 #include <array>
 #include <memory>
@@ -12,11 +13,11 @@
 #include <chrono>
 #include <algorithm>
 
-#include <stdio.h>
 
 using namespace FF;
 using namespace AV::Audio;
 using namespace AV::Video;
+using namespace AV::Sub;
 
 namespace AV
 {
@@ -374,7 +375,7 @@ namespace AV
       pkt.size = pkt_size;
    }
 
-   void Scheduler::process_subtitle()
+   void Scheduler::process_subtitle(Display::APtr&& vid, Renderer::APtr&& sub_renderer)
    {
       if (sub_pkt_queue.size() == 0)
       {
@@ -413,10 +414,13 @@ namespace AV
       {
          for (unsigned i = 0; i < sub.num_rects; i++)
          {
-            if (sub.rects[i]->text)
-               std::cout << sub.rects[i]->text << std::endl;
             if (sub.rects[i]->ass)
+            {
                std::cout << sub.rects[i]->ass << std::endl;
+
+               // Push our new message to handler queue. We just handle ASS atm, but hey ;)
+               sub_renderer->push_msg(sub.rects[i]->ass);
+            }
          }
       }
       else
@@ -425,6 +429,14 @@ namespace AV
       }
 
       avsubtitle_free(&sub);
+
+      // Print all subtitle messages (usually/hopefully just 1 :D) currently active in this PTS to screen.
+      auto& list = sub_renderer->msg_list(video_pts);
+      std::for_each(list.begin(), list.end(), 
+            [&vid](const Message& msg)
+            {
+               vid->subtitle(msg);
+            });
    }
 
    // Video thread
@@ -432,6 +444,8 @@ namespace AV
    {
       auto vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
       auto event = GLEvent::shared();
+
+      auto sub_render = ASSRenderer::shared();
 
       AVFrame *frame = avcodec_alloc_frame();
 
@@ -442,13 +456,14 @@ namespace AV
 
       while (video_thread_active && vid_pkt_queue.alive())
       {
-         if (file->sub().active)
-            process_subtitle();
 
          if (vid_pkt_queue.size() > 0 && !is_paused)
          {
             auto pkt = vid_pkt_queue.pull();
             process_video(pkt.get(), vid, frame);
+
+            if (file->sub().active)
+               process_subtitle(vid, sub_render);
          }
          else
          {

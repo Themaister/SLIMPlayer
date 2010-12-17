@@ -8,24 +8,30 @@ extern "C"
 
 #include <list>
 #include <memory>
+#include <string>
+#include "General.hpp"
+#include "subtitle.hpp"
 
 namespace AV 
 {
    namespace Sub 
    {
-      class ASSRenderer
+      class ASSRenderer : public Renderer, public General::Shared<ASSRenderer>
       {
          public:
             ASSRenderer();
             ~ASSRenderer();
 
             void push_msg(const std::string &msg);
-
+            const ListType& msg_list(double timestamp) const;
 
          private:
             ASS_Library *lib;
             ASS_Track *track;
             ASS_Renderer *renderer;
+
+            ListType queue_list;
+            ListType active_list;
       };
    }
 }

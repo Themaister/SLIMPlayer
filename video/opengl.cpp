@@ -232,6 +232,9 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
    glDrawArrays(GL_QUADS, 0, 4);
 }
 
+void GL::subtitle(const Sub::Message& msg)
+{}
+
 void GL::flip()
 {
    glfwSwapBuffers();
