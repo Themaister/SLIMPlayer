@@ -126,6 +126,12 @@ namespace AV
       auto event = next_event();
       avlock.unlock();
 
+      if (!is_active)
+      {
+         sync_sleep(0.01);
+         return;
+      }
+
       switch (event)
       {
          case EventHandler::Event::Quit:
@@ -167,7 +173,7 @@ namespace AV
             throw std::runtime_error("Unknown event popped up :V\n");
       }
 
-      if (is_paused || !is_active)
+      if (is_paused)
       {
          sync_sleep(0.01);
          return;
