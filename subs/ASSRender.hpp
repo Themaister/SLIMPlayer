@@ -28,6 +28,7 @@ namespace AV
          private:
             ASS_Library *library;
             ASS_Renderer *renderer;
+            ASS_Track *track;
 
             ListType queue_list;
             ListType active_list;

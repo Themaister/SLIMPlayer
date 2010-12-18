@@ -377,58 +377,54 @@ namespace AV
 
    void Scheduler::process_subtitle(Display::APtr&& vid, Renderer::APtr&& sub_renderer)
    {
-      if (sub_pkt_queue.size() == 0)
+      while (sub_pkt_queue.size() > 0)
       {
-         return;
-      }
+         auto packet = sub_pkt_queue.pull();
 
-      auto packet = sub_pkt_queue.pull();
+         auto& pkt = packet.get();
 
-      auto& pkt = packet.get();
+         uint8_t *data = pkt.data;
+         size_t size = pkt.size;
 
-      uint8_t *data = pkt.data;
-      size_t size = pkt.size;
+         int finished = 0;
+         AVSubtitle sub;
 
-      int finished = 0;
-      AVSubtitle sub;
+         int ret;
 
-      int ret;
-      
-      while (pkt.size > 0)
-      {
-         ret = avcodec_decode_subtitle2(file->sub().ctx, &sub, &finished, &pkt);
-
-         if (ret <= 0)
+         while (pkt.size > 0)
          {
-            std::cerr << "Decode subtitle failed." << std::endl;
-            break;
-         }
+            ret = avcodec_decode_subtitle2(file->sub().ctx, &sub, &finished, &pkt);
 
-         pkt.data += ret;
-         pkt.size -= ret;
-      }
-      pkt.data = data;
-      pkt.size = size;
-
-      if (finished)
-      {
-         for (unsigned i = 0; i < sub.num_rects; i++)
-         {
-            if (sub.rects[i]->ass)
+            if (ret <= 0)
             {
-               std::cout << sub.rects[i]->ass << std::endl;
+               std::cerr << "Decode subtitle failed." << std::endl;
+               break;
+            }
 
-               // Push our new message to handler queue. We just handle ASS atm, but hey ;)
-               sub_renderer->push_msg(sub.rects[i]->ass, video_pts);
+            pkt.data += ret;
+            pkt.size -= ret;
+         }
+         pkt.data = data;
+         pkt.size = size;
+
+         if (finished)
+         {
+            for (unsigned i = 0; i < sub.num_rects; i++)
+            {
+               if (sub.rects[i]->ass)
+               {
+                  // Push our new message to handler queue. We just handle ASS atm, but hey ;)
+                  sub_renderer->push_msg(sub.rects[i]->ass, video_pts);
+               }
             }
          }
-      }
-      else
-      {
-         std::cout << "Did not finish a subtitle frame." << std::endl;
-      }
+         else
+         {
+            std::cout << "Did not finish a subtitle frame." << std::endl;
+         }
 
-      avsubtitle_free(&sub);
+         avsubtitle_free(&sub);
+      }
 
       // Print all subtitle messages (usually/hopefully just 1 :D) currently active in this PTS to screen.
       auto& list = sub_renderer->msg_list(video_pts);
