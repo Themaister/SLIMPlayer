@@ -12,7 +12,6 @@
 #include <vector>
 #include <stdexcept>
 #include <array>
-#include <iostream>
 
 using namespace AV::Video;
 using namespace AV;
@@ -233,10 +232,9 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 
 void GL::subtitle(const Sub::Message& msg)
 {
-   std::cout << "Got subtitle!!!" << std::endl;
    for (int i = 0; i < 3; i++)
    {
-      glBufferSubData(GL_PIXEL_UNPACK_BUFFER, width * height * i * 2, msg.w * msg.h >> (i ? 2 : 0), &msg.data[i][0]);
+      glBufferSubData(GL_PIXEL_UNPACK_BUFFER, width * height * i * 2, (msg.w * msg.h) >> (i ? 2 : 0), &msg.data[i][0]);
    }
 
    for (int i = 0; i < 3; i++)
@@ -247,7 +245,7 @@ void GL::subtitle(const Sub::Message& msg)
       glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.w >> (i ? 1 : 0)));
       glPixelStorei(GL_UNPACK_ROW_LENGTH, msg.w >> (i ? 1 : 0)); 
       glTexSubImage2D(GL_TEXTURE_2D,
-            0, msg.x >> (i ? 1 : 0), msg.y >> (i ? 1 : 0), msg.w >> (i ? 1 : 0), msg.h >> (i ? 1 : 0), GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
+            0, msg.x >> (i ? 1 : 0), msg.y >> (i ? 1 : 0), msg.w >> (i ? 1 : 0), msg.h >> (i ? 1 : 0), GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
 
    }
 }
