@@ -249,7 +249,7 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 
 void GL::subtitle(const Sub::Message& msg)
 {
-   glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, msg.w * msg.h, &msg.data[0]);
+   glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, msg.w * msg.h * 4, &msg.data[0]);
 
    glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.w * 4));
    glPixelStorei(GL_UNPACK_ROW_LENGTH, msg.w); 
