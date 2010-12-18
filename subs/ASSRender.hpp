@@ -23,15 +23,16 @@ namespace AV
             ~ASSRenderer();
 
             void push_msg(const std::string &msg, double video_pts);
-            const ListType& msg_list(double timestamp) const;
+            const ListType& msg_list(double timestamp);
 
          private:
             ASS_Library *library;
             ASS_Renderer *renderer;
             ASS_Track *track;
 
-            ListType queue_list;
             ListType active_list;
+
+            static Message create_message(ASS_Image *img);
       };
    }
 }

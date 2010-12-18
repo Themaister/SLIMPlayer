@@ -314,8 +314,6 @@ namespace AV
             sync_sleep(sleep_time);
          }
 
-         video_pts_ts = get_time();
-         vid->flip();
       }
    }
 
@@ -460,6 +458,9 @@ namespace AV
 
             if (file->sub().active)
                process_subtitle(vid, sub_render);
+
+            video_pts_ts = get_time();
+            vid->flip();
          }
          else
          {
