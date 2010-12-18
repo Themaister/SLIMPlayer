@@ -29,38 +29,22 @@ namespace AV
    }
 }
 
-#define _r(c)  ((c)>>24)
-#define _g(c)  (((c)>>16)&0xFF)
-#define _b(c)  (((c)>>8)&0xFF)
-
-#define clip(f) (uint16_t)(f > 255.0 ? 255 : (f < 0.0 ? 0 : (uint16_t)f))
-
-#define rgb_to_y(r, g, b) clip(0.299 * r + 0.587 * g + 0.114 * b)
-#define rgb_to_u(r, g, b) clip(-0.147 * r - 0.2888 * g + 0.436 * b)
-#define rgb_to_v(r, g, b) clip(0.615 * r - 0.515 * g - 0.100 * b)
-
 Message ASSRenderer::create_message(ASS_Image *img)
 {
-   std::array<std::vector<uint8_t>, 3> data = { 
-      {  std::vector<uint8_t>(img->w * img->h), 
-         std::vector<uint8_t>(img->w * img->h), 
-         std::vector<uint8_t>(img->w * img->h) } 
-   }; 
+   std::vector<uint32_t> data(img->w * img->h);
 
-   std::fill(data[1].begin(), data[1].end(), 128);
-   std::fill(data[2].begin(), data[2].end(), 128);
+   std::fill(data.begin(), data.end(), img->color);
 
    int stride = img->stride;
    for (int y = 0; y < img->h; y++)
    {
       for (int x = 0; x < img->w; x++)
       {
-         data[0][y * img->w + x] = img->bitmap[y * stride + x];
+         data[y * img->w + x] = (0xFFFFFF00U & data[y * img->w + x]) | img->bitmap[y * stride + x];
       }
    }
 
-   const uint8_t *ptr[] = { &data[0][0], &data[1][0], &data[2][0] };
-   return Message(img->dst_x, img->dst_y, img->w, img->h, ptr);
+   return Message(img->dst_x, img->dst_y, img->w, img->h, &data[0]);
 }
 
 ASSRenderer::ASSRenderer(unsigned width, unsigned height)

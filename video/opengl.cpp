@@ -76,7 +76,7 @@ namespace Internal
       "{"
       "   output OUT;"
       "   float4 res = yuvTEX(tex);"
-      "   OUT.color = lerp(res, float4(1, 1, 1, 1), tex2D(tex_a, tex));"
+      "   OUT.color = float4(lerp(res.rgb, tex2D(tex_a, tex).rgb, tex2D(tex_a, tex).a), 1.0);"
       "   return OUT;"
       "}";
 
@@ -161,13 +161,13 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
 
    init_cg();
 
-   std::vector<uint8_t> buf(8 * width * height);
+   std::vector<uint8_t> buf(10 * width * height);
    std::fill(buf.begin(), buf.begin() + 6 * width * height, 0x80);
    std::fill(buf.begin() + 6 * width * height, buf.end(), 0);
 
 
    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-   glBufferData(GL_PIXEL_UNPACK_BUFFER, 8 * width * height, &buf[0], GL_STREAM_DRAW);
+   glBufferData(GL_PIXEL_UNPACK_BUFFER, 10 * width * height, &buf[0], GL_STREAM_DRAW);
 
    for (int i = 0; i < 4; i++)
    {
@@ -177,9 +177,15 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexImage2D(GL_TEXTURE_2D,
-            0, GL_LUMINANCE8, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
+
+      if (i < 3)
+         glTexImage2D(GL_TEXTURE_2D,
+               0, GL_LUMINANCE8, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
+      else
+         glTexImage2D(GL_TEXTURE_2D,
+               0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, (void*)(width * height * 6));
    }
+
 
    std::array<GLfloat, 64> vertex_buf;
    std::copy(Internal::vertexes, Internal::vertexes + 12, &vertex_buf[0]);
@@ -232,21 +238,23 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
             0, 0, 0, w >> (i ? xs : 0), h >> (i ? ys : 0), GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
    }
 
+   glPixelStorei(GL_UNPACK_ROW_LENGTH, width);
+   glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(width * 4));
    glActiveTexture(GL_TEXTURE3);
    glBindTexture(GL_TEXTURE_2D, gl_tex[3]);
    glTexSubImage2D(GL_TEXTURE_2D,
-         0, 0, 0, width, height, GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * 6));
+         0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, (void*)(width * height * 6));
 
 }
 
 void GL::subtitle(const Sub::Message& msg)
 {
-   glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, msg.w * msg.h, &msg.data[0][0]);
+   glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, msg.w * msg.h, &msg.data[0]);
 
-   glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.w));
+   glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.w * 4));
    glPixelStorei(GL_UNPACK_ROW_LENGTH, msg.w); 
    glTexSubImage2D(GL_TEXTURE_2D,
-         0, msg.x, msg.y, msg.w, msg.h, GL_LUMINANCE, GL_UNSIGNED_BYTE, nullptr);
+         0, msg.x, msg.y, msg.w, msg.h, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, nullptr);
 }
 
 void GL::flip()

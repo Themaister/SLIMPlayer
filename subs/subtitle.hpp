@@ -15,17 +15,16 @@ namespace AV
       struct Message : public General::Shared<Message>
       {
          Message(unsigned in_x, unsigned in_y, unsigned in_w, unsigned in_h,
-               const uint8_t *in_data[3]) :
+               const uint32_t *in_data) :
             x(in_x), y(in_y), w(in_w), h(in_h)
          {
-            for (int i = 0; i < 3; i++)
-               data[i] = std::vector<uint8_t>(in_data[i], in_data[i] + w * h);
+            data = std::vector<uint32_t>(in_data, in_data + w * h);
          }
 
          Message(Message&&) = default;
 
          unsigned x, y, w, h;
-         std::array<std::vector<uint8_t>, 3> data;
+         std::vector<uint32_t> data;
       };
 
       class Renderer : public General::SharedAbstract<Renderer>
