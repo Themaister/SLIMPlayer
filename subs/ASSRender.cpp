@@ -63,15 +63,16 @@ Message ASSRenderer::create_message(ASS_Image *img)
    return Message(img->dst_x, img->dst_y, img->w, img->h, ptr);
 }
 
-ASSRenderer::ASSRenderer()
+ASSRenderer::ASSRenderer(unsigned width, unsigned height)
 {
    library = ass_library_init();
    ass_set_message_cb(library, Internal::ass_msg_cb, nullptr);
 
    renderer = ass_renderer_init(library);
    // Hardcode for now.
-   ass_set_frame_size(renderer, 1280, 720);
+   ass_set_frame_size(renderer, width, height);
    ass_set_fonts(renderer, nullptr, "Sans", 1, nullptr, 1);
+   ass_set_hinting(renderer, ASS_HINTING_LIGHT);
 
    //track = ass_new_track(library);
    track = ass_read_file(library, const_cast<char*>("/tmp/test.ass"), nullptr);

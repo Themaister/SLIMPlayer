@@ -19,7 +19,7 @@ namespace AV
       class ASSRenderer : public Renderer, public General::Shared<ASSRenderer>
       {
          public:
-            ASSRenderer();
+            ASSRenderer(unsigned width, unsigned height);
             ~ASSRenderer();
 
             void push_msg(const std::string &msg, double video_pts);

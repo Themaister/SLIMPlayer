@@ -33,7 +33,7 @@ namespace Video {
          float aspect_ratio;
          bool cg_inited;
 
-         GLuint gl_tex[3];
+         GLuint gl_tex[4];
          GLuint pbo;
          GLuint vbo;
 

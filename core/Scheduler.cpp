@@ -439,7 +439,7 @@ namespace AV
       auto vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
       auto event = GLEvent::shared();
 
-      auto sub_render = ASSRenderer::shared();
+      auto sub_render = ASSRenderer::shared(file->video().width, file->video().height);
 
       AVFrame *frame = avcodec_alloc_frame();
 

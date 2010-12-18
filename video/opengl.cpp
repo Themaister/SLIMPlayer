@@ -59,6 +59,7 @@ namespace Internal
       "uniform sampler2D tex_y : TEXUNIT0;"
       "uniform sampler2D tex_u : TEXUNIT1;"
       "uniform sampler2D tex_v : TEXUNIT2;"
+      "uniform sampler2D tex_a : TEXUNIT3;"
       "uniform float2 chroma_shift;"
       ""
       ""
@@ -74,7 +75,8 @@ namespace Internal
       "output main_fragment (float2 tex : TEXCOORD0)"
       "{"
       "   output OUT;"
-      "   OUT.color = yuvTEX(tex);"
+      "   float4 res = yuvTEX(tex);"
+      "   OUT.color = lerp(res, float4(1, 1, 1, 1), tex2D(tex_a, tex));"
       "   return OUT;"
       "}";
 
@@ -151,7 +153,7 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
    glColor3f(1, 1, 1);
    glClearColor(0, 0, 0, 0);
 
-   glGenTextures(3, gl_tex);
+   glGenTextures(4, gl_tex);
    glGenBuffers(1, &pbo);
    glGenBuffers(1, &vbo);
 
@@ -159,13 +161,15 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
 
    init_cg();
 
-   std::vector<uint8_t> buf(6 * width * height);
-   std::fill(buf.begin(), buf.end(), 0x80);
+   std::vector<uint8_t> buf(8 * width * height);
+   std::fill(buf.begin(), buf.begin() + 6 * width * height, 0x80);
+   std::fill(buf.begin() + 6 * width * height, buf.end(), 0);
+
 
    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-   glBufferData(GL_PIXEL_UNPACK_BUFFER, 6 * width * height, &buf[0], GL_STREAM_DRAW);
+   glBufferData(GL_PIXEL_UNPACK_BUFFER, 8 * width * height, &buf[0], GL_STREAM_DRAW);
 
-   for (int i = 0; i < 3; i++)
+   for (int i = 0; i < 4; i++)
    {
       glActiveTexture(GL_TEXTURE0 + i);
       glBindTexture(GL_TEXTURE_2D, gl_tex[i]);
@@ -228,26 +232,21 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
             0, 0, 0, w >> (i ? xs : 0), h >> (i ? ys : 0), GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
    }
 
+   glActiveTexture(GL_TEXTURE3);
+   glBindTexture(GL_TEXTURE_2D, gl_tex[3]);
+   glTexSubImage2D(GL_TEXTURE_2D,
+         0, 0, 0, width, height, GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * 6));
+
 }
 
 void GL::subtitle(const Sub::Message& msg)
 {
-   for (int i = 0; i < 3; i++)
-   {
-      glBufferSubData(GL_PIXEL_UNPACK_BUFFER, width * height * i * 2, (msg.w * msg.h) >> (i ? 2 : 0), &msg.data[i][0]);
-   }
+   glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, msg.w * msg.h, &msg.data[0][0]);
 
-   for (int i = 0; i < 3; i++)
-   {
-      glActiveTexture(GL_TEXTURE0 + i);
-      glBindTexture(GL_TEXTURE_2D, gl_tex[i]);
-
-      glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.w >> (i ? 1 : 0)));
-      glPixelStorei(GL_UNPACK_ROW_LENGTH, msg.w >> (i ? 1 : 0)); 
-      glTexSubImage2D(GL_TEXTURE_2D,
-            0, msg.x >> (i ? 1 : 0), msg.y >> (i ? 1 : 0), msg.w >> (i ? 1 : 0), msg.h >> (i ? 1 : 0), GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
-
-   }
+   glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.w));
+   glPixelStorei(GL_UNPACK_ROW_LENGTH, msg.w); 
+   glTexSubImage2D(GL_TEXTURE_2D,
+         0, msg.x, msg.y, msg.w, msg.h, GL_LUMINANCE, GL_UNSIGNED_BYTE, nullptr);
 }
 
 void GL::flip()
@@ -262,7 +261,7 @@ GL::~GL()
    uninit_cg();
    glDisableClientState(GL_VERTEX_ARRAY);
    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-   glDeleteTextures(3, gl_tex);
+   glDeleteTextures(4, gl_tex);
    glDeleteBuffers(1, &pbo);
    glDeleteBuffers(1, &vbo);
 
