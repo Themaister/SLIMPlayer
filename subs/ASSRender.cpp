@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <array>
 #include <vector>
+#include <stdexcept>
 
 using namespace AV::Sub;
 
@@ -21,9 +22,12 @@ namespace AV
 
          static void ass_msg_cb(int level, const char *fmt, va_list args, void *)
          {
-            std::cerr << "libass debug:" << std::endl;
-            vfprintf(stderr, fmt, args);
-            std::cerr << std::endl;
+            if (level < 6)
+            {
+               std::cerr << "libass debug:" << std::endl;
+               vfprintf(stderr, fmt, args);
+               std::cerr << std::endl;
+            }
          }
       }
    }
@@ -55,12 +59,13 @@ ASSRenderer::ASSRenderer(unsigned width, unsigned height)
    renderer = ass_renderer_init(library);
    // Hardcode for now.
    ass_set_frame_size(renderer, width, height);
-   ass_set_fonts(renderer, nullptr, "Sans", 1, nullptr, 1);
+   ass_set_extract_fonts(library, 1);
+   ass_set_fonts(renderer, nullptr, nullptr, 1, nullptr, 1);
    ass_set_hinting(renderer, ASS_HINTING_LIGHT);
 
-   //track = ass_new_track(library);
    track = ass_read_file(library, const_cast<char*>("/tmp/test.ass"), nullptr);
-   assert(track);
+   if (!track)
+      throw std::runtime_error("Couldn't open ASS track.");
 }
 
 ASSRenderer::~ASSRenderer()
@@ -81,15 +86,9 @@ void ASSRenderer::push_msg(const std::string &msg, double video_pts)
 // Return a list of messages to overlay on frame at pts.
 const ASSRenderer::ListType& ASSRenderer::msg_list(double pts)
 {
-   std::cout << "Trying to render!" << std::endl;
    int change;
    ASS_Image *img = ass_render_frame(renderer, track, (long long)(pts * 1000), &change);
    
-   if (img)
-   {
-      std::cout << "Yay, got image! :D" << std::endl;
-   }
-
    if (change)
    {
       active_list.clear();

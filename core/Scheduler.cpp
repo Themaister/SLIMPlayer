@@ -276,44 +276,7 @@ namespace AV
 
          vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
 
-         // We have to calculate how long we should wait before swapping frame to screen.
-         // We sync everything to audio clock.
-         double delta = get_time();
-
-         avlock.lock();
-         delta -= audio_pts_ts;
-         double sleep_time = video_pts - (audio_pts + delta);
-         avlock.unlock();
-
-         // Yes, it can happen! :(
-         if (delta < 0.0)
-            delta = 0.0;
-         //std::cout << "Delta: " << delta << std::endl;
-
-         if (video_pts > (audio_pts + delta) && audio_thread_active)
-         {
-            double last_frame_delta = get_time();
-            last_frame_delta -= video_pts_ts;
-
-            // :(
-            if (last_frame_delta < 0.0)
-               last_frame_delta = 0.0;
-
-            // We try to keep the sleep time to a somewhat small value to avoid choppy video in some cases.
-            // Max sleep time should be a bit over 1 frame time to allow audio to catch up.
-            double max_sleep = 1.2 * frame_time() - last_frame_delta;
-
-            if (max_sleep < 0.0)
-               max_sleep = 0.0;
-
-            if (sleep_time > max_sleep)
-            {
-               sleep_time = max_sleep;
-            }
-            //std::cout << "Sleep for " << sleep_time << std::endl;
-            sync_sleep(sleep_time);
-         }
-
+         
       }
    }
 
@@ -439,7 +402,9 @@ namespace AV
       auto vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
       auto event = GLEvent::shared();
 
-      auto sub_render = ASSRenderer::shared(file->video().width, file->video().height);
+      ASSRenderer::Ptr sub_render;
+      if (file->sub().active)
+         sub_render = ASSRenderer::shared(file->video().width, file->video().height);
 
       AVFrame *frame = avcodec_alloc_frame();
 
@@ -458,6 +423,44 @@ namespace AV
 
             if (file->sub().active)
                process_subtitle(vid, sub_render);
+
+            // We have to calculate how long we should wait before swapping frame to screen.
+            // We sync everything to audio clock.
+            double delta = get_time();
+
+            avlock.lock();
+            delta -= audio_pts_ts;
+            double sleep_time = video_pts - (audio_pts + delta);
+            avlock.unlock();
+
+            // Yes, it can happen! :(
+            if (delta < 0.0)
+               delta = 0.0;
+            //std::cout << "Delta: " << delta << std::endl;
+
+            if (video_pts > (audio_pts + delta) && audio_thread_active)
+            {
+               double last_frame_delta = get_time();
+               last_frame_delta -= video_pts_ts;
+
+               // :(
+               if (last_frame_delta < 0.0)
+                  last_frame_delta = 0.0;
+
+               // We try to keep the sleep time to a somewhat small value to avoid choppy video in some cases.
+               // Max sleep time should be a bit over 1 frame time to allow audio to catch up.
+               double max_sleep = 1.2 * frame_time() - last_frame_delta;
+
+               if (max_sleep < 0.0)
+                  max_sleep = 0.0;
+
+               if (sleep_time > max_sleep)
+               {
+                  sleep_time = max_sleep;
+               }
+               //std::cout << "Sleep for " << sleep_time << std::endl;
+               sync_sleep(sleep_time);
+            }
 
             video_pts_ts = get_time();
             vid->flip();

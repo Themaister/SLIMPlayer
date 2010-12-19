@@ -45,6 +45,8 @@ namespace Video {
             CGcontext cgCtx;
             CGprogram cgFPrg;
             CGprogram cgVPrg;
+            CGprogram cgSFPrg;
+            CGprogram cgSVPrg;
             CGprofile cgFProf;
             CGprofile cgVProf;
             CGparameter chroma_shift;

@@ -80,6 +80,38 @@ namespace Internal
       "   return OUT;"
       "}";
 
+   static const char* stock_cg_program =
+      "void main_vertex"
+      "("
+      "	float4 position	: POSITION,"
+      "	float4 color	: COLOR,"
+      "	float2 texCoord : TEXCOORD0,"
+      ""
+      "  uniform float4x4 modelViewProj,"
+      ""
+      "	out float4 oPosition : POSITION,"
+      "	out float4 oColor    : COLOR,"
+      "	out float2 otexCoord : TEXCOORD"
+      ")"
+      "{"
+      "	oPosition = mul(modelViewProj, position);"
+      "	oColor = color;"
+      "	otexCoord = texCoord;"
+      "}"
+      ""
+      ""
+      "struct output "
+      "{"
+      "  float4 color    : COLOR;"
+      "};"
+      ""
+      "output main_fragment(float2 texCoord : TEXCOORD0, uniform sampler2D decal : TEXUNIT0) "
+      "{"
+      "   output OUT;"
+      "   OUT.color = tex2D(decal, texCoord);"
+      "   return OUT;"
+      "}";
+
    static float aspect_ratio;
 
    extern "C" {
@@ -150,9 +182,12 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
 
    glDisable(GL_DITHER);
    glDisable(GL_DEPTH_TEST);
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    glColor3f(1, 1, 1);
    glClearColor(0, 0, 0, 0);
 
+   glEnable(GL_TEXTURE_2D);
    glGenTextures(4, gl_tex);
    glGenBuffers(1, &pbo);
    glGenBuffers(1, &vbo);
@@ -169,7 +204,7 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
    glBufferData(GL_PIXEL_UNPACK_BUFFER, 10 * width * height, &buf[0], GL_STREAM_DRAW);
 
-   for (int i = 0; i < 4; i++)
+   for (int i = 0; i < 3; i++)
    {
       glActiveTexture(GL_TEXTURE0 + i);
       glBindTexture(GL_TEXTURE_2D, gl_tex[i]);
@@ -178,21 +213,16 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-      if (i < 3)
-         glTexImage2D(GL_TEXTURE_2D,
-               0, GL_LUMINANCE8, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
-      else
-         glTexImage2D(GL_TEXTURE_2D,
-               0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, (void*)(width * height * 6));
+      glTexImage2D(GL_TEXTURE_2D,
+            0, GL_LUMINANCE8, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
    }
 
-
-   std::array<GLfloat, 64> vertex_buf;
+   std::array<GLfloat, 128> vertex_buf;
    std::copy(Internal::vertexes, Internal::vertexes + 12, &vertex_buf[0]);
    std::copy(Internal::tex_coords, Internal::tex_coords + 8, &vertex_buf[32]);
 
    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertex_buf.size(), &vertex_buf[0], GL_STATIC_DRAW);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertex_buf.size(), &vertex_buf[0], GL_DYNAMIC_DRAW);
 
    glEnableClientState(GL_VERTEX_ARRAY);
    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -216,6 +246,10 @@ int GL::get_alignment(int pitch)
 
 void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 {
+   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), nullptr);
+   cgGLBindProgram(cg.cgFPrg);
+   cgGLBindProgram(cg.cgVPrg);
+
    glClear(GL_COLOR_BUFFER_BIT);
 
    // YUV420P
@@ -238,29 +272,51 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
             0, 0, 0, w >> (i ? xs : 0), h >> (i ? ys : 0), GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
    }
 
-   glPixelStorei(GL_UNPACK_ROW_LENGTH, width);
-   glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(width * 4));
-   glActiveTexture(GL_TEXTURE3);
-   glBindTexture(GL_TEXTURE_2D, gl_tex[3]);
-   glTexSubImage2D(GL_TEXTURE_2D,
-         0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, (void*)(width * height * 6));
+   glFlush();
+   glDrawArrays(GL_QUADS, 0, 4);
 
+   cgGLBindProgram(cg.cgSFPrg);
+   cgGLBindProgram(cg.cgSVPrg);
+
+   glActiveTexture(GL_TEXTURE0);
+   glBindTexture(GL_TEXTURE_2D, gl_tex[3]);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), (void*)256);
 }
 
 void GL::subtitle(const Sub::Message& msg)
 {
-   glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, msg.w * msg.h * sizeof(uint32_t), &msg.data[0]);
-
+   glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, msg.w * msg.h * 4, &msg.data[0]);
    glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.w * 4));
    glPixelStorei(GL_UNPACK_ROW_LENGTH, msg.w); 
-   glTexSubImage2D(GL_TEXTURE_2D,
-         0, msg.x, msg.y, msg.w, msg.h, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, nullptr);
+
+   glTexImage2D(GL_TEXTURE_2D,
+         0, GL_RGBA, msg.w, msg.h, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, nullptr);
+
+   float x_l = (float)msg.x / width;
+   float x_h = (float)(msg.x + msg.w) / width;
+   float y_h = (float)(height - msg.y) / height;
+   float y_l = (float)(height - msg.y - msg.h) / height;
+
+   const GLfloat vertexes[] = {
+      x_l, y_l, 0,
+      x_l, y_h, 0,
+      x_h, y_h, 0,
+      x_h, y_l, 0
+   };
+
+   glBufferSubData(GL_ARRAY_BUFFER, 256, sizeof(vertexes), vertexes);
+
+   glFlush();
+   glDrawArrays(GL_QUADS, 0, 4);
 }
 
 void GL::flip()
 {
-   glFlush();
-   glDrawArrays(GL_QUADS, 0, 4);
    glfwSwapBuffers();
 }
 
@@ -278,7 +334,6 @@ GL::~GL()
 
 void GL::init_cg()
 {
-   CGparameter cg_mvp_matrix;
    cg.cgCtx = cgCreateContext();
    if (cg.cgCtx == nullptr)
    {
@@ -294,21 +349,27 @@ void GL::init_cg()
    cgGLSetOptimalOptions(cg.cgVProf);
    cg.cgFPrg = cgCreateProgram(cg.cgCtx, CG_SOURCE, Internal::cg_program, cg.cgFProf, "main_fragment", 0);
    cg.cgVPrg = cgCreateProgram(cg.cgCtx, CG_SOURCE, Internal::cg_program, cg.cgVProf, "main_vertex", 0);
-   if (cg.cgFPrg == nullptr || cg.cgVPrg == NULL)
+   cg.cgSFPrg = cgCreateProgram(cg.cgCtx, CG_SOURCE, Internal::stock_cg_program, cg.cgFProf, "main_fragment", 0);
+   cg.cgSVPrg = cgCreateProgram(cg.cgCtx, CG_SOURCE, Internal::stock_cg_program, cg.cgVProf, "main_vertex", 0);
+   if (cg.cgFPrg == nullptr || cg.cgVPrg == nullptr || cg.cgSVPrg == nullptr || cg.cgSFPrg == nullptr)
    {
       throw std::runtime_error("Cg compile error\n");
    }
 
    cgGLLoadProgram(cg.cgFPrg);
    cgGLLoadProgram(cg.cgVPrg);
+   cgGLLoadProgram(cg.cgSFPrg);
+   cgGLLoadProgram(cg.cgSVPrg);
    cgGLEnableProfile(cg.cgFProf);
    cgGLEnableProfile(cg.cgVProf);
    cgGLBindProgram(cg.cgFPrg);
    cgGLBindProgram(cg.cgVPrg);
 
-   cg_mvp_matrix = cgGetNamedParameter(cg.cgVPrg, "modelViewProj");
+   CGparameter cg_mvp_matrix = cgGetNamedParameter(cg.cgVPrg, "modelViewProj");
+   CGparameter cg_mvp_matrix_s = cgGetNamedParameter(cg.cgSVPrg, "modelViewProj");
    cg.chroma_shift = cgGetNamedParameter(cg.cgFPrg, "chroma_shift");
    cgGLSetStateMatrixParameter(cg_mvp_matrix, CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
+   cgGLSetStateMatrixParameter(cg_mvp_matrix_s, CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
    cg_inited = true;
 }
 
