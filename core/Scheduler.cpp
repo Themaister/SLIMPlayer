@@ -121,6 +121,7 @@ namespace AV
       // Very dirty, but can't find a better way for now.
       if (audio_pts_hack)
       {
+         std::cerr << "Audio PTS hack activated! Video might blow up or seek really slow." << std::endl;
          // We will seek to this absolute time.
          audio_written = ((has_video ? video_pts : audio_pts) + time) * (file->audio().rate * file->audio().channels * 2);
          file->seek(video_pts, has_video ? video_pts : audio_pts, time, FF::SeekTarget::Audio);
