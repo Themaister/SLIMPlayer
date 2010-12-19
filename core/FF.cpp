@@ -238,7 +238,6 @@ namespace FF
          // TODO: Fix me.
          if (vctx->sample_aspect_ratio.den != 0 && vctx->sample_aspect_ratio.num != 0)
          {
-            std::cout << "Got ratio: " << av_q2d(vctx->sample_aspect_ratio) << std::endl;
             vid_info.aspect_ratio = (float)vctx->width * av_q2d(vctx->sample_aspect_ratio) / vctx->height ;
          }
          else
