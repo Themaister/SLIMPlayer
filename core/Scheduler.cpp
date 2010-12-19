@@ -264,9 +264,6 @@ namespace AV
 
       if (finished)
       {
-         //std::cout << "Video PTS: " << pkt.pts * av_q2d(file->video().time_base) << std::endl;
-         // I really doubt this will work with variable FPS, but hey. This approach seems to work well for the videos I've tested so far.
-         //
          if (pts != AV_NOPTS_VALUE)
             video_pts = pts * av_q2d(file->video().time_base);
          else
@@ -275,8 +272,6 @@ namespace AV
          video_pts += frame->repeat_pict / (2.0 * frame_time());
 
          vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
-
-         
       }
    }
 
@@ -404,7 +399,7 @@ namespace AV
 
       ASSRenderer::Ptr sub_render;
       if (file->sub().active)
-         sub_render = ASSRenderer::shared(file->sub().fonts, file->video().width, file->video().height);
+         sub_render = ASSRenderer::shared(file->sub().fonts, file->sub().ass_data, file->video().width, file->video().height);
 
       AVFrame *frame = avcodec_alloc_frame();
 

@@ -52,15 +52,15 @@ Message ASSRenderer::create_message(ASS_Image *img)
    return Message(img->dst_x, img->dst_y, img->w, img->h, &data[0]);
 }
 
-ASSRenderer::ASSRenderer(const std::vector<std::pair<std::string, std::vector<uint8_t>>> fonts,  unsigned width, unsigned height)
+ASSRenderer::ASSRenderer(const std::vector<std::pair<std::string, std::vector<uint8_t>>> fonts, const std::vector<uint8_t>& ass_data, unsigned width, unsigned height)
 {
    library = ass_library_init();
    ass_set_message_cb(library, Internal::ass_msg_cb, nullptr);
 
+   // Here enters the prettycast! :D
    std::for_each(fonts.begin(), fonts.end(), 
          [this](const std::pair<std::string, std::vector<uint8_t>>& font)
          {
-            std::cout << "Adding font!" << std::endl;
             ass_add_font(library, const_cast<char*>(font.first.c_str()), 
                reinterpret_cast<char*>(const_cast<uint8_t*>(&font.second[0])), font.second.size());
          });
@@ -73,9 +73,8 @@ ASSRenderer::ASSRenderer(const std::vector<std::pair<std::string, std::vector<ui
    ass_set_hinting(renderer, ASS_HINTING_LIGHT);
 
 
-   track = ass_read_file(library, const_cast<char*>("/tmp/test.ass"), nullptr);
-   if (!track)
-      throw std::runtime_error("Couldn't open ASS track.");
+   track = ass_new_track(library);
+   ass_process_codec_private(track, reinterpret_cast<char*>(const_cast<uint8_t*>(&ass_data[0])), ass_data.size());
 }
 
 ASSRenderer::~ASSRenderer()
@@ -90,7 +89,7 @@ void ASSRenderer::push_msg(const std::string &msg, double video_pts)
 {
    //std::cout << "Push_msg!" << std::endl;
 
-   //ass_process_codec_private(track, const_cast<char*>(msg.c_str()), msg.size());
+   ass_process_data(track, const_cast<char*>(msg.c_str()), msg.size());
 }
 
 // Return a list of messages to overlay on frame at pts.

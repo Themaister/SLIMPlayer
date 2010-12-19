@@ -162,7 +162,6 @@ namespace FF
       {
          if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_ATTACHMENT)
          {
-            std::cout << "Found attachment!" << std::endl;
             attachments.push_back(i);
          }
       }
@@ -189,22 +188,24 @@ namespace FF
          sctx = fctx->streams[sub_stream]->codec;
          scodec = avcodec_find_decoder(sctx->codec_id);
          if (scodec)
+         {
             avcodec_open(sctx, scodec);
+
+            if (sctx->extradata != nullptr)
+               sub_info.ass_data.insert(sub_info.ass_data.end(), sctx->extradata, sctx->extradata + sctx->extradata_size);
+         }
       }
 
-      if (attachments.size() > 0)
-      {
-         std::for_each(attachments.begin(), attachments.end(), 
-               [this](int id)
+      // Extract TTF fonts for use in ASS.
+      std::for_each(attachments.begin(), attachments.end(), 
+            [this](int id)
+            {
+               AVCodecContext *ctx = fctx->streams[id]->codec;
+               if (ctx->codec_id == CODEC_ID_TTF)
                {
-                  AVCodecContext *ctx = fctx->streams[id]->codec;
-                  std::cout << "Codec ID: " << ctx->codec_id << std::endl;
-                  if (ctx->codec_id == CODEC_ID_TTF)
-                  {
-                     sub_info.fonts.push_back(std::make_pair("", std::vector<uint8_t>(ctx->extradata, ctx->extradata + ctx->extradata_size)));
-                  }
-               });
-      }
+                  sub_info.fonts.push_back(std::make_pair("", std::vector<uint8_t>(ctx->extradata, ctx->extradata + ctx->extradata_size)));
+               }
+            });
    }
 
    void MediaFile::set_media_info()
@@ -303,8 +304,6 @@ namespace FF
          type = Packet::Type::Video;
       else if (index == sub_stream)
          type = Packet::Type::Subtitle;
-      else
-         std::cout << "Got a weird packet!" << std::endl;
 
       return type;
    }
