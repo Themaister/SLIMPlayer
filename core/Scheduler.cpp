@@ -84,7 +84,7 @@ namespace AV
       aud_pkt_queue.clear();
       vid_pkt_queue.clear();
 
-      if (sub_renderer.get() != nullptr)
+      if (sub_renderer != nullptr)
          sub_renderer->flush();
 
       if (has_audio)

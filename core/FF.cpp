@@ -186,13 +186,22 @@ namespace FF
       if (sub_stream >= 0)
       {
          sctx = fctx->streams[sub_stream]->codec;
-         scodec = avcodec_find_decoder(sctx->codec_id);
-         if (scodec)
+         if (sctx->codec_id == CODEC_ID_SSA)
          {
-            avcodec_open(sctx, scodec);
+            scodec = avcodec_find_decoder(sctx->codec_id);
+            if (scodec)
+            {
+               avcodec_open(sctx, scodec);
 
-            if (sctx->extradata != nullptr)
-               sub_info.ass_data.insert(sub_info.ass_data.end(), sctx->extradata, sctx->extradata + sctx->extradata_size);
+               if (sctx->extradata != nullptr)
+                  sub_info.ass_data.insert(sub_info.ass_data.end(), sctx->extradata, sctx->extradata + sctx->extradata_size);
+            }
+         }
+         else
+         {
+            sctx = nullptr;
+            sub_stream = -1;
+            attachments.clear();
          }
       }
 
@@ -227,7 +236,14 @@ namespace FF
          vid_info.height = vctx->height;
 
          // TODO: Fix me.
-         vid_info.aspect_ratio = (float)vctx->width / vctx->height;
+         if (vctx->sample_aspect_ratio.den != 0 && vctx->sample_aspect_ratio.num != 0)
+         {
+            std::cout << "Got ratio: " << av_q2d(vctx->sample_aspect_ratio) << std::endl;
+            vid_info.aspect_ratio = (float)vctx->width * av_q2d(vctx->sample_aspect_ratio) / vctx->height ;
+         }
+         else
+            vid_info.aspect_ratio = (float)vctx->width / vctx->height;
+
          vid_info.active = true;
          vid_info.time_base = fctx->streams[vid_stream]->time_base;
          vid_info.ctx = vctx;
