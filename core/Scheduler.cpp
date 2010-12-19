@@ -68,12 +68,12 @@ namespace AV
          video_thread.join();
       if (has_audio)
          audio_thread.join();
-
    }
 
    bool Scheduler::active() const
    {
-      return is_active || audio_thread_active || video_thread_active;
+      bool res = is_active || audio_thread_active || video_thread_active;
+      return res;
    }
 
    EventHandler::Event Scheduler::next_event()
@@ -161,7 +161,7 @@ namespace AV
             is_active = false;
             video_thread_active = false;
             audio_thread_active = false;
-            break;
+            return;
 
          case EventHandler::Event::Pause:
             std::cerr << "Pause toggling stream!!!" << std::endl;

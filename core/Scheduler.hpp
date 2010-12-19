@@ -43,7 +43,7 @@ namespace AV
          FF::MediaFile::Ptr file;
          bool has_video;
          bool has_audio;
-         bool is_active;
+         volatile bool is_active;
          double video_pts;
          double audio_pts;
          double audio_pts_ts;
