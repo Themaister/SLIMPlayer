@@ -84,6 +84,9 @@ namespace AV
       aud_pkt_queue.clear();
       vid_pkt_queue.clear();
 
+      if (sub_renderer.get() != nullptr)
+         sub_renderer->flush();
+
       if (has_audio)
       {
          audio_lock.lock();
@@ -331,7 +334,7 @@ namespace AV
       pkt.size = pkt_size;
    }
 
-   void Scheduler::process_subtitle(Display::APtr&& vid, Renderer::APtr&& sub_renderer)
+   void Scheduler::process_subtitle(Display::APtr&& vid)
    {
       while (sub_pkt_queue.size() > 0)
       {
@@ -397,9 +400,8 @@ namespace AV
       auto vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
       auto event = GLEvent::shared();
 
-      ASSRenderer::Ptr sub_render;
       if (file->sub().active)
-         sub_render = ASSRenderer::shared(file->sub().fonts, file->sub().ass_data, file->video().width, file->video().height);
+         sub_renderer = ASSRenderer::shared(file->sub().fonts, file->sub().ass_data, file->video().width, file->video().height);
 
       AVFrame *frame = avcodec_alloc_frame();
 
@@ -417,7 +419,7 @@ namespace AV
             process_video(pkt.get(), vid, frame);
 
             if (file->sub().active)
-               process_subtitle(vid, sub_render);
+               process_subtitle(vid);
 
             // We have to calculate how long we should wait before swapping frame to screen.
             // We sync everything to audio clock.

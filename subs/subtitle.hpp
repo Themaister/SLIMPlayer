@@ -36,6 +36,7 @@ namespace AV
             typedef std::list<Message> ListType;
 
             virtual const ListType& msg_list(double timestamp) = 0;
+            virtual void flush() = 0;
       };
    }
 }

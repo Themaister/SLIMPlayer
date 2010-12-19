@@ -90,6 +90,7 @@ namespace AV
          PacketQueue vid_pkt_queue;
          PacketQueue aud_pkt_queue;
          PacketQueue sub_pkt_queue;
+         AV::Sub::Renderer::APtr sub_renderer;
 
          std::thread video_thread;
          std::thread audio_thread;
@@ -97,7 +98,7 @@ namespace AV
 
          void perform_seek(double delta);
 
-         void process_subtitle(AV::Video::Display::APtr&&, AV::Sub::Renderer::APtr&&);
+         void process_subtitle(AV::Video::Display::APtr&&);
          void process_video(AVPacket&, AV::Video::Display::APtr&&, AVFrame*);
          void process_audio(AVPacket&, AV::Audio::Stream<int16_t>::APtr&&);
          void pause_toggle();

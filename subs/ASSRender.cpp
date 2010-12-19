@@ -84,6 +84,11 @@ ASSRenderer::~ASSRenderer()
    ass_library_done(library);
 }
 
+void ASSRenderer::flush()
+{
+   ass_flush_events(track);
+}
+
 // Grab decoded messages from ffmpeg here.
 void ASSRenderer::push_msg(const std::string &msg, double video_pts)
 {
