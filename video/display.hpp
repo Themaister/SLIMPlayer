@@ -17,7 +17,6 @@
  */
 
 
-
 #ifndef __VIDEO_HPP
 #define __VIDEO_HPP
 

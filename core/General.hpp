@@ -17,8 +17,6 @@
  */
 
 
-
-
 #ifndef __GENERAL_HPP
 #define __GENERAL_HPP
 

@@ -17,7 +17,6 @@
  */
 
 
-
 #include "FF.hpp"
 #include <stdexcept>
 #include <iostream>

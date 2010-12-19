@@ -17,7 +17,6 @@
  */
 
 
-
 #include "ASSRender.hpp"
 #include <stdarg.h>
 #include <stdio.h>

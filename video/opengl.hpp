@@ -17,7 +17,6 @@
  */
 
 
-
 #ifndef __OPENGL_HPP
 #define __OPENGL_HPP
 

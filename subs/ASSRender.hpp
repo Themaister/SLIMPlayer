@@ -17,13 +17,12 @@
  */
 
 
-
 #ifndef __ASS_RENDER_HPP
 #define __ASS_RENDER_HPP
 
 extern "C" 
 {
-#include <ass/ass.h>
+   #include <ass/ass.h>
 }
 
 #include <list>

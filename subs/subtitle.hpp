@@ -17,7 +17,6 @@
  */
 
 
-
 #ifndef __SUBTITLE_HPP
 #define __SUBTITLE_HPP
 

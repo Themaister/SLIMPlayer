@@ -17,7 +17,6 @@
  */
 
 
-
 #ifndef __FF_HPP
 #define __FF_HPP
 

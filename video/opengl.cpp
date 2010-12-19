@@ -17,7 +17,6 @@
  */
 
 
-
 #include "opengl.hpp"
 
 #define GL_GLEXT_PROTOTYPES
