@@ -303,55 +303,47 @@ namespace AV
       if (!has_audio)
          return;
 
-      uint8_t *pkt_data = pkt.data;
       size_t pkt_size = pkt.size;
 
-      // AVCODEC_MAX_AUDIO_FRAME_SIZE / 2 would do, but FFmpeg needs some extra padding-stuff, so why not...
-      std::array<int16_t, AVCODEC_MAX_AUDIO_FRAME_SIZE> buf;
-      while (pkt.size > 0)
+      // AVCODEC_MAX_AUDIO_FRAME_SIZE would do, but FFmpeg needs some extra padding-stuff, so why not...
+      std::array<uint8_t, AVCODEC_MAX_AUDIO_FRAME_SIZE * 2> buf;
+      size_t written = 0;
+      while (pkt_size > 0)
       {
-         int out_size = AVCODEC_MAX_AUDIO_FRAME_SIZE * 2;
-         int ret = avcodec_decode_audio3(file->audio().ctx, &buf[0], &out_size, &pkt);
+         int out_size = buf.size() - written;
+         int ret = avcodec_decode_audio3(file->audio().ctx, reinterpret_cast<int16_t*>(&buf[written]), &out_size, &pkt);
          if (ret <= 0)
             break;
 
-         pkt.size -= ret;
-         pkt.data += ret;
-
-         if (out_size <= 0)
-            continue;
-
-         audio_lock.lock();
-         aud->write(&buf[0], out_size / 2);
-         audio_lock.unlock();
-
-         avlock.lock();
-         audio_written += out_size;
-
-         // Update Audio timestamp. Doesn't use the actual audio pts, but I really doubt we'll need that. PCM is PCM after all :)
-
-         if (pkt.pts != (int64_t)AV_NOPTS_VALUE)
-         {
-            audio_pts = pkt.pts * av_q2d(file->audio().time_base) - aud->delay();
-         }
-         else if (pkt.dts != (int64_t)AV_NOPTS_VALUE)
-         {
-            audio_pts = pkt.dts * av_q2d(file->audio().time_base) - aud->delay();
-         }
-         else
-         {
-            audio_pts = (double)audio_written/(file->audio().rate * file->audio().channels * 2) - aud->delay();
-            //std::cerr << "Couldn't get audio pts nor dts. Guessing!" << std::endl;
-            audio_pts_hack = true;
-         }
-         //std::cout << "Audio PTS: " << audio_pts << std::endl;
-
-         audio_pts_ts = get_time();
-         avlock.unlock();
+         pkt_size -= ret;
+         written += out_size;
       }
 
-      pkt.data = pkt_data;
-      pkt.size = pkt_size;
+      audio_lock.lock();
+      aud->write(reinterpret_cast<const int16_t*>(&buf[0]), written / 2);
+      audio_lock.unlock();
+
+      avlock.lock();
+      audio_written += written;
+
+      if (pkt.pts != (int64_t)AV_NOPTS_VALUE)
+      {
+         audio_pts = pkt.pts * av_q2d(file->audio().time_base) - aud->delay();
+      }
+      else if (pkt.dts != (int64_t)AV_NOPTS_VALUE)
+      {
+         audio_pts = pkt.dts * av_q2d(file->audio().time_base) - aud->delay();
+      }
+      else
+      {
+         audio_pts = (double)audio_written/(file->audio().rate * file->audio().channels * 2) - aud->delay();
+         //std::cerr << "Couldn't get audio pts nor dts. Guessing!" << std::endl;
+         audio_pts_hack = true;
+      }
+      //std::cout << "Audio PTS: " << audio_pts << std::endl;
+
+      audio_pts_ts = get_time();
+      avlock.unlock();
    }
 
    void Scheduler::process_subtitle(Display::APtr&& vid)
