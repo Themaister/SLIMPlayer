@@ -3,6 +3,7 @@
 
 #include "FF.hpp"
 #include "AV.hpp"
+#include "Scheduler.hpp"
 #include "audio/rsound.hpp"
 #include "video/opengl.hpp"
 #include "subs/ASSRender.hpp"
