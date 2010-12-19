@@ -28,6 +28,9 @@ extern "C" {
 }
 
 #include "General.hpp"
+#include <vector>
+#include <string>
+#include <utility>
 
 namespace FF
 {
@@ -107,6 +110,7 @@ namespace FF
          {
             bool active;
             AVCodecContext *ctx;
+            std::vector<std::pair<std::string, std::vector<uint8_t>>> fonts;
          };
 
          const audio_info& audio() const;
@@ -127,6 +131,7 @@ namespace FF
          audio_info aud_info;
          video_info vid_info;
          subtitle_info sub_info;
+         std::vector<int> attachments;
          int vid_stream;
          int aud_stream;
          int sub_stream;

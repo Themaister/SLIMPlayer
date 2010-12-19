@@ -59,7 +59,6 @@ namespace Internal
       "uniform sampler2D tex_y : TEXUNIT0;"
       "uniform sampler2D tex_u : TEXUNIT1;"
       "uniform sampler2D tex_v : TEXUNIT2;"
-      "uniform sampler2D tex_a : TEXUNIT3;"
       "uniform float2 chroma_shift;"
       ""
       ""
@@ -76,7 +75,7 @@ namespace Internal
       "{"
       "   output OUT;"
       "   float4 res = yuvTEX(tex);"
-      "   OUT.color = float4(lerp(res.rgb, tex2D(tex_a, tex).rgb, tex2D(tex_a, tex).a), 1.0);"
+      "   OUT.color = res;" 
       "   return OUT;"
       "}";
 

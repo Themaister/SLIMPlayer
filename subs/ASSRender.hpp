@@ -11,6 +11,8 @@ extern "C"
 #include <string>
 #include "General.hpp"
 #include "subtitle.hpp"
+#include <utility>
+#include <vector>
 
 namespace AV 
 {
@@ -19,7 +21,7 @@ namespace AV
       class ASSRenderer : public Renderer, public General::Shared<ASSRenderer>
       {
          public:
-            ASSRenderer(unsigned width, unsigned height);
+            ASSRenderer(const std::vector<std::pair<std::string, std::vector<uint8_t>>> fonts, unsigned width, unsigned height);
             ~ASSRenderer();
 
             void push_msg(const std::string &msg, double video_pts);

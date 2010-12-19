@@ -1,6 +1,7 @@
 #include "FF.hpp"
 #include <stdexcept>
 #include <iostream>
+#include <algorithm>
 
 namespace FF
 {
@@ -157,6 +158,15 @@ namespace FF
          }
       }
 
+      for (unsigned i = 0; i < fctx->nb_streams; i++)
+      {
+         if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_ATTACHMENT)
+         {
+            std::cout << "Found attachment!" << std::endl;
+            attachments.push_back(i);
+         }
+      }
+
 
       if (vid_stream >= 0)
       {
@@ -180,6 +190,20 @@ namespace FF
          scodec = avcodec_find_decoder(sctx->codec_id);
          if (scodec)
             avcodec_open(sctx, scodec);
+      }
+
+      if (attachments.size() > 0)
+      {
+         std::for_each(attachments.begin(), attachments.end(), 
+               [this](int id)
+               {
+                  AVCodecContext *ctx = fctx->streams[id]->codec;
+                  std::cout << "Codec ID: " << ctx->codec_id << std::endl;
+                  if (ctx->codec_id == CODEC_ID_TTF)
+                  {
+                     sub_info.fonts.push_back(std::make_pair("", std::vector<uint8_t>(ctx->extradata, ctx->extradata + ctx->extradata_size)));
+                  }
+               });
       }
    }
 
@@ -279,6 +303,8 @@ namespace FF
          type = Packet::Type::Video;
       else if (index == sub_stream)
          type = Packet::Type::Subtitle;
+      else
+         std::cout << "Got a weird packet!" << std::endl;
 
       return type;
    }

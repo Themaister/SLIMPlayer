@@ -387,7 +387,7 @@ namespace AV
          avsubtitle_free(&sub);
       }
 
-      // Print all subtitle messages (usually/hopefully just 1 :D) currently active in this PTS to screen.
+      // Print all subtitle currently active in this PTS to screen.
       auto& list = sub_renderer->msg_list(video_pts);
       std::for_each(list.begin(), list.end(), 
             [&vid](const Message& msg)
@@ -404,7 +404,7 @@ namespace AV
 
       ASSRenderer::Ptr sub_render;
       if (file->sub().active)
-         sub_render = ASSRenderer::shared(file->video().width, file->video().height);
+         sub_render = ASSRenderer::shared(file->sub().fonts, file->video().width, file->video().height);
 
       AVFrame *frame = avcodec_alloc_frame();
 
