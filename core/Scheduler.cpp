@@ -24,6 +24,7 @@
 #include "AV.hpp"
 #include "Scheduler.hpp"
 #include "audio/rsound.hpp"
+#include "audio/null.hpp"
 #include "video/opengl.hpp"
 #include "subs/ASSRender.hpp"
 #include <iostream>
@@ -264,7 +265,7 @@ namespace AV
       return frame_time;
    }
 
-   void Scheduler::process_video(AVPacket& pkt, Display::APtr&& vid, AVFrame *frame)
+   void Scheduler::process_video(AVPacket& pkt, Display::APtr vid, AVFrame *frame)
    {
       if (!has_video)
          return;
@@ -298,7 +299,7 @@ namespace AV
       }
    }
 
-   void Scheduler::process_audio(AVPacket& pkt, Stream<int16_t>::APtr&& aud)
+   void Scheduler::process_audio(AVPacket& pkt)
    {
       if (!has_audio)
          return;
@@ -320,7 +321,7 @@ namespace AV
       }
 
       audio_lock.lock();
-      aud->write(reinterpret_cast<const int16_t*>(&buf[0]), written / 2);
+      audio->write(reinterpret_cast<const int16_t*>(&buf[0]), written / 2);
       audio_lock.unlock();
 
       avlock.lock();
@@ -328,15 +329,15 @@ namespace AV
 
       if (pkt.pts != (int64_t)AV_NOPTS_VALUE)
       {
-         audio_pts = pkt.pts * av_q2d(file->audio().time_base) - aud->delay();
+         audio_pts = pkt.pts * av_q2d(file->audio().time_base) - audio->delay();
       }
       else if (pkt.dts != (int64_t)AV_NOPTS_VALUE)
       {
-         audio_pts = pkt.dts * av_q2d(file->audio().time_base) - aud->delay();
+         audio_pts = pkt.dts * av_q2d(file->audio().time_base) - audio->delay();
       }
       else
       {
-         audio_pts = (double)audio_written/(file->audio().rate * file->audio().channels * 2) - aud->delay();
+         audio_pts = (double)audio_written/(file->audio().rate * file->audio().channels * 2) - audio->delay();
          //std::cerr << "Couldn't get audio pts nor dts. Guessing!" << std::endl;
          audio_pts_hack = true;
       }
@@ -487,24 +488,25 @@ namespace AV
    // Audio thread
    void Scheduler::audio_thread_fn()
    {
-      auto aud = RSound<int16_t>::shared("localhost", file->audio().channels, file->audio().rate);
-      audio = aud;
+      audio = RSound<int16_t>::shared("localhost", file->audio().channels, file->audio().rate);
+      if (!audio->alive())
+         audio = Null<int16_t>::shared(file->audio().channels, file->audio().rate);
 
       while (audio_thread_active && aud_pkt_queue.alive())
       {
          if (is_paused)
          {
-            aud->pause();
+            audio->pause();
             while (is_paused)
                sync_sleep(0.01);
 
-            aud->unpause();
+            audio->unpause();
          }
 
          if (aud_pkt_queue.size() > 0)
          {
             auto pkt = aud_pkt_queue.pull();
-            process_audio(pkt.get(), aud);
+            process_audio(pkt.get());
          }
          else
          {

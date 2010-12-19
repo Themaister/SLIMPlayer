@@ -37,6 +37,7 @@ namespace AV
 
          bool active() const;
          void run();
+         static void sync_sleep(float time);
 
       private:
          FF::MediaFile::Ptr file;
@@ -72,15 +73,14 @@ namespace AV
          void perform_seek(double delta);
 
          void process_subtitle(AV::Video::Display::APtr&&);
-         void process_video(AVPacket&, AV::Video::Display::APtr&&, AVFrame*);
-         void process_audio(AVPacket&, AV::Audio::Stream<int16_t>::APtr&&);
+         void process_video(AVPacket&, AV::Video::Display::APtr, AVFrame*);
+         void process_audio(AVPacket&);
          void pause_toggle();
 
          void video_thread_fn();
          void audio_thread_fn();
 
          double frame_time() const;
-         static void sync_sleep(float time);
          static double get_time();
    };
 }
