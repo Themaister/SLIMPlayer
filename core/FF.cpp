@@ -82,6 +82,9 @@ namespace FF
    Packet& Packet::operator=(Packet&& in_pkt)
    {
       //std::cerr << "Packet::operator=(&&)" << std::endl;
+      if (in_pkt.pkt != nullptr)
+         av_dup_packet(in_pkt.pkt);
+
       if (pkt && pkt->data)
          av_free_packet(pkt);
       if (pkt)
