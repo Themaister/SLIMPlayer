@@ -23,7 +23,7 @@
 #include "FF.hpp"
 #include "AV.hpp"
 #include "Scheduler.hpp"
-#include "audio/rsound.hpp"
+#include "audio/alsa.hpp"
 #include "audio/null.hpp"
 #include "video/opengl.hpp"
 #include "subs/ASSRender.hpp"
@@ -488,9 +488,12 @@ namespace AV
    // Audio thread
    void Scheduler::audio_thread_fn()
    {
-      audio = RSound<int16_t>::shared("localhost", file->audio().channels, file->audio().rate);
+      audio = ALSA<int16_t>::shared(file->audio().channels, file->audio().rate);
       if (!audio->alive())
+      {
+         std::cerr << "Failed to open audio driver, using Null driver!" << std::endl;
          audio = Null<int16_t>::shared(file->audio().channels, file->audio().rate);
+      }
 
       while (audio_thread_active && aud_pkt_queue.alive())
       {

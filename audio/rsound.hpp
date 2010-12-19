@@ -34,32 +34,32 @@ namespace AV
       class RSound : public Stream<T>, public General::Shared<RSound<T>>
       {
          public:
-            RSound(std::string server, int channels, int samplerate, int buffersize = 8092, int latency = 0) : thread_active(false), m_chan(channels)
-         {
-            rsd_init(&rd);
-            int format = type_to_format(T());
-            rsd_set_param(rd, RSD_FORMAT, &format);
-            rsd_set_param(rd, RSD_CHANNELS, &channels);
-            rsd_set_param(rd, RSD_HOST, const_cast<char*>(server.c_str()));
-            rsd_set_param(rd, RSD_SAMPLERATE, &samplerate);
+            RSound(const std::string& server, int channels, int samplerate, int buffersize = 8092, int latency = 0) : thread_active(false), m_chan(channels)
+            {
+               rsd_init(&rd);
+               int format = type_to_format(T());
+               rsd_set_param(rd, RSD_FORMAT, &format);
+               rsd_set_param(rd, RSD_CHANNELS, &channels);
+               rsd_set_param(rd, RSD_HOST, const_cast<char*>(server.c_str()));
+               rsd_set_param(rd, RSD_SAMPLERATE, &samplerate);
 
-            if (buffersize < 256)
-               buffersize = 256;
+               if (buffersize < 256)
+                  buffersize = 256;
 
-            buffersize *= sizeof(T);
-            rsd_set_param(rd, RSD_BUFSIZE, &buffersize);
-            rsd_set_param(rd, RSD_LATENCY, &latency);
-            m_latency = latency;
+               buffersize *= sizeof(T);
+               rsd_set_param(rd, RSD_BUFSIZE, &buffersize);
+               rsd_set_param(rd, RSD_LATENCY, &latency);
+               m_latency = latency;
 
-            int rc = rsd_start(rd);
-            if (rc < 0) // Couldn't start, don't do anything after this, might implement some proper error handling here.
-               runnable = false;
-            else
-               runnable = true;
+               int rc = rsd_start(rd);
+               if (rc < 0) // Couldn't start, don't do anything after this, might implement some proper error handling here.
+                  runnable = false;
+               else
+                  runnable = true;
 
-            emptybuf = new uint8_t[buffersize];
-            memset(emptybuf, 0, buffersize);
-         }
+               emptybuf = new uint8_t[buffersize];
+               memset(emptybuf, 0, buffersize);
+            }
 
             ~RSound()
             {
