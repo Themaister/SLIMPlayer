@@ -74,14 +74,11 @@ namespace FF
 
    Packet::Packet() : pkt(nullptr)
    {
-      //std::cerr << "Packet()" << std::endl;
       pkt = (AVPacket*)av_mallocz(sizeof(AVPacket));
-      //av_init_packet(pkt);
    }
 
    Packet& Packet::operator=(Packet&& in_pkt)
    {
-      //std::cerr << "Packet::operator=(&&)" << std::endl;
       if (in_pkt.pkt != nullptr)
          av_dup_packet(in_pkt.pkt);
 
@@ -97,7 +94,6 @@ namespace FF
 
    Packet::Packet(Packet&& in_pkt) : pkt(nullptr)
    {
-      //std::cerr << "Packet(&&)" << std::endl;
       *this = std::move(in_pkt);
    }
 
@@ -106,18 +102,17 @@ namespace FF
       if (pkt == nullptr)
          throw std::runtime_error("Trying to dereference nullptr\n");
 
-      //std::cerr << "get()" << std::endl;
       return *pkt;
    }
 
    Packet::~Packet()
    {
-      //std::cerr << "~Packet()" << std::endl;
-
-      if (pkt && pkt->data)
-         av_free_packet(pkt);
       if (pkt)
+      {
+         av_dup_packet(pkt);
+         av_free_packet(pkt);
          av_freep(&pkt);
+      }
    }
 
    MediaFile::MediaFile(const char *path) : vcodec(nullptr), acodec(nullptr), actx(nullptr), vctx(nullptr), sctx(nullptr), fctx(nullptr), vid_stream(-1), aud_stream(-1), sub_stream(-1)
