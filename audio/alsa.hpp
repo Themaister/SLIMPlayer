@@ -20,7 +20,6 @@
 #define __AUDIO_ALSA_H
 
 #include "stream.hpp"
-#include "rsound.h"
 #include <string>
 #include <thread>
 #include <iostream>
