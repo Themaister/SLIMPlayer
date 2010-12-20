@@ -18,8 +18,6 @@
 
 
 #include "FF.hpp"
-#include "audio/rsound.hpp"
-#include "video/opengl.hpp"
 #include "AV.hpp"
 #include "Scheduler.hpp"
 #include <stdexcept>
