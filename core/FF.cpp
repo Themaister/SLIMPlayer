@@ -29,6 +29,7 @@ namespace FF
    {
       static uint64_t g_video_pkt_pts = AV_NOPTS_VALUE;
 
+      // Custom functions for packets. Make sure that we get the correct PTS values from the packets when needed.
       extern "C" {
          static int get_buffer(AVCodecContext *c, AVFrame *pic);
          static void release_buffer(AVCodecContext *c, AVFrame *pic);
@@ -55,7 +56,7 @@ namespace FF
       Internal::g_video_pkt_pts = pts;
    }
 
-
+   // FFmpeg global init. This is called on every instance of MediaFile.
    FFMPEG::FFMPEG()
    {
       ref()++;
@@ -75,6 +76,7 @@ namespace FF
       pkt = (AVPacket*)av_mallocz(sizeof(AVPacket));
    }
 
+   // Move semantic. We can never allow two copies of the same Packet out there in the wild.
    Packet& Packet::operator=(Packet&& in_pkt)
    {
       if (pkt && pkt->data)
@@ -141,7 +143,7 @@ namespace FF
 
    void MediaFile::resolve_codecs()
    {
-
+      // Find first video stream.
       for (unsigned i = 0; i < fctx->nb_streams; i++)
       {
          if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO)
@@ -150,7 +152,7 @@ namespace FF
             break;
          }
       }
-
+      // Find first audio stream.
       for (unsigned i = 0; i < fctx->nb_streams; i++)
       {
          if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_AUDIO)
@@ -159,7 +161,7 @@ namespace FF
             break;
          }
       }
-
+      // Find first subtitle stream.
       for (unsigned i = 0; i < fctx->nb_streams; i++)
       {
          if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_SUBTITLE)
@@ -168,7 +170,7 @@ namespace FF
             break;
          }
       }
-
+      // Map out all attachments, typically fonts for ASS. :)
       for (unsigned i = 0; i < fctx->nb_streams; i++)
       {
          if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_ATTACHMENT)
@@ -177,7 +179,7 @@ namespace FF
          }
       }
 
-
+      // Find decoders for the various formats.
       if (vid_stream >= 0)
       {
          vctx = fctx->streams[vid_stream]->codec;
@@ -194,6 +196,7 @@ namespace FF
             avcodec_open(actx, acodec);
       }
 
+      // Extract ASS metadata header from stream.
       if (sub_stream >= 0)
       {
          sctx = fctx->streams[sub_stream]->codec;
@@ -295,6 +298,7 @@ namespace FF
       if (av_seek_frame(fctx, stream, seek_to, flags) < 0)
          throw std::runtime_error("av_seek_frame() failed");
 
+      // We need to flush our buffers after seeking.
       if (acodec)
          avcodec_flush_buffers(actx);
       if (vcodec)
@@ -320,9 +324,11 @@ namespace FF
 
    Packet::Type MediaFile::packet(Packet& pkt)
    {
+      // Reads next packet from the file.
       if (av_read_frame(fctx, &pkt.get()) < 0)
          return Packet::Type::Error;
 
+      // Makes sure that packet has it's own allocated space. So we can put it in a queue safely.
       av_dup_packet(&pkt.get());
 
       Packet::Type type = Packet::Type::None;

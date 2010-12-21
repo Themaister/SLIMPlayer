@@ -71,7 +71,7 @@ Message ASSRenderer::create_message(ASS_Image *img)
    return Message(img->dst_x, img->dst_y, img->w, img->h, &data[0]);
 }
 
-ASSRenderer::ASSRenderer(const std::vector<std::pair<std::string, std::vector<uint8_t>>> fonts, const std::vector<uint8_t>& ass_data, unsigned width, unsigned height)
+ASSRenderer::ASSRenderer(const std::vector<std::pair<std::string, std::vector<uint8_t>>>& fonts, const std::vector<uint8_t>& ass_data, unsigned width, unsigned height)
 {
    library = ass_library_init();
    ass_set_message_cb(library, Internal::ass_msg_cb, nullptr);
