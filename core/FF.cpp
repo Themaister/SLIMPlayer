@@ -48,8 +48,6 @@ namespace FF
          if (pic) av_freep(&pic->opaque);
          avcodec_default_release_buffer(c, pic);
       }
-
-
    }
 
    void set_global_pts(uint64_t pts)
@@ -79,9 +77,6 @@ namespace FF
 
    Packet& Packet::operator=(Packet&& in_pkt)
    {
-      if (in_pkt.pkt != nullptr)
-         av_dup_packet(in_pkt.pkt);
-
       if (pkt && pkt->data)
          av_free_packet(pkt);
       if (pkt)
@@ -109,7 +104,6 @@ namespace FF
    {
       if (pkt)
       {
-         av_dup_packet(pkt);
          av_free_packet(pkt);
          av_freep(&pkt);
       }
@@ -294,6 +288,8 @@ namespace FF
       {
          stream = aud_stream;
          seek_to = (audio_pts + rel) / av_q2d(fctx->streams[aud_stream]->time_base);
+         if (seek_to < 0.0)
+            seek_to = 0.0;
       }
 
       if (av_seek_frame(fctx, stream, seek_to, flags) < 0)
@@ -326,6 +322,8 @@ namespace FF
    {
       if (av_read_frame(fctx, &pkt.get()) < 0)
          return Packet::Type::Error;
+
+      av_dup_packet(&pkt.get());
 
       Packet::Type type = Packet::Type::None;
 
