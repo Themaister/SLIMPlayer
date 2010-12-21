@@ -33,7 +33,7 @@ namespace AV
 
          ~Scheduler();
 
-         void add_event_handler(EventHandler::APtr& ptr);
+         void add_event_handler(EventHandler::APtr ptr);
 
          bool active() const;
          void run();

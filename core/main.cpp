@@ -22,6 +22,7 @@
 #include "Scheduler.hpp"
 #include <stdexcept>
 #include <iostream>
+#include "term/TermEvent.hpp"
 
 using namespace FF;
 using namespace AV;
@@ -39,8 +40,8 @@ int main(int argc, char *argv[])
    try
    {
       auto media_file = MediaFile::shared(argv[1]);
-      
       AV::Scheduler sched(media_file);
+      sched.add_event_handler(Input::TermEvent::shared());
 
       while (sched.active())
       {

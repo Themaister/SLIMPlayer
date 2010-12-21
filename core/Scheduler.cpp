@@ -408,6 +408,13 @@ namespace AV
             });
    }
 
+   void Scheduler::add_event_handler(EventHandler::APtr handler)
+   {
+      avlock.lock();
+      event_handlers.push_back(handler);
+      avlock.unlock();
+   }
+
    // Video thread
    void Scheduler::video_thread_fn()
    {
@@ -420,9 +427,7 @@ namespace AV
       AVFrame *frame = avcodec_alloc_frame();
 
       // Add event handler for GL.
-      avlock.lock();
-      event_handlers.push_back(event);
-      avlock.unlock();
+      add_event_handler(event);
 
       while (video_thread_active && vid_pkt_queue.alive())
       {
