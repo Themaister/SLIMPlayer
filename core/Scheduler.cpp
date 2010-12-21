@@ -121,7 +121,9 @@ namespace AV
       // Very dirty, but can't find a better way for now.
       if (audio_pts_hack)
       {
-         std::cerr << "Audio PTS hack activated! Video might blow up or seek really slow." << std::endl;
+         if (file->video().active)
+            std::cerr << "Audio PTS hack activated! Video might blow up or seek really slow." << std::endl;
+
          // We will seek to this absolute time.
          audio_written = ((has_video ? video_pts : audio_pts) + time) * (file->audio().rate * file->audio().channels * 2);
          file->seek(video_pts, has_video ? video_pts : audio_pts, time, FF::SeekTarget::Audio);
@@ -143,6 +145,15 @@ namespace AV
       is_paused = false;
    }
 
+   void Scheduler::show_info() const
+   {
+      std::for_each(info_handlers.begin(), info_handlers.end(),
+            [this](Input::InfoOutput::APtr& ptr)
+            {
+               ptr->output(video_pts, audio_pts, file->video().active, file->audio().active);
+            });
+   }
+
    void Scheduler::run()
    {
       avlock.lock();
@@ -155,37 +166,39 @@ namespace AV
          return;
       }
 
+      show_info();
+
       switch (event)
       {
          case EventHandler::Event::Quit:
-            std::cerr << "Quitting!!!" << std::endl;
+            //std::cerr << "Quitting!!!" << std::endl;
             is_active = false;
             video_thread_active = false;
             audio_thread_active = false;
             return;
 
          case EventHandler::Event::Pause:
-            std::cerr << "Pause toggling stream!!!" << std::endl;
+            //std::cerr << "Pause toggling stream!!!" << std::endl;
             pause_toggle();
             break;
 
          case EventHandler::Event::SeekBack10:
-            std::cerr << "Seeking backwards!!!" << std::endl;
+            //std::cerr << "Seeking backwards!!!" << std::endl;
             perform_seek(-10.0);
             break;
 
          case EventHandler::Event::SeekForward10:
-            std::cerr << "Seeking forward!!!" << std::endl;
+            //std::cerr << "Seeking forward!!!" << std::endl;
             perform_seek(10.0);
             break;
 
          case EventHandler::Event::SeekBack60:
-            std::cerr << "Seeking backwards!!!" << std::endl;
+            //std::cerr << "Seeking backwards!!!" << std::endl;
             perform_seek(-60.0);
             break;
 
          case EventHandler::Event::SeekForward60:
-            std::cerr << "Seeking forward!!!" << std::endl;
+            //std::cerr << "Seeking forward!!!" << std::endl;
             perform_seek(60.0);
             break;
 
@@ -220,21 +233,21 @@ namespace AV
 
          case Packet::Type::Audio:
             // Bad mmay? :) Temporary hack.
-            while (aud_pkt_queue.size() > 64)
+            while (aud_pkt_queue.size() > 16)
                sync_sleep(0.01);
 
             aud_pkt_queue.push(std::move(pkt));
             break;
 
          case Packet::Type::Video:
-            while (vid_pkt_queue.size() > 64)
+            while (vid_pkt_queue.size() > 16)
                sync_sleep(0.01);
 
             vid_pkt_queue.push(std::move(pkt));
             break;
 
          case Packet::Type::Subtitle:
-            while (sub_pkt_queue.size() > 64)
+            while (sub_pkt_queue.size() > 16)
                sync_sleep(0.01);
 
             sub_pkt_queue.push(std::move(pkt));
@@ -410,9 +423,14 @@ namespace AV
 
    void Scheduler::add_event_handler(EventHandler::APtr handler)
    {
-      avlock.lock();
+      std::lock_guard<std::mutex> f(lock);
       event_handlers.push_back(handler);
-      avlock.unlock();
+   }
+
+   void Scheduler::add_info_handler(EventHandler::APtr handler)
+   {
+      std::lock_guard<std::mutex> f(lock);
+      info_handlers.push_back(handler);
    }
 
    // Video thread

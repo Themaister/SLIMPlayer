@@ -129,8 +129,8 @@ namespace FF
          {
             bool active;
             AVCodecContext *ctx;
-            std::vector<std::pair<std::string, std::vector<uint8_t>>> fonts;
-            std::vector<uint8_t> ass_data;
+            std::vector<std::pair<std::string, std::vector<char>>> fonts;
+            std::vector<char> ass_data;
          };
 
          const audio_info& audio() const;

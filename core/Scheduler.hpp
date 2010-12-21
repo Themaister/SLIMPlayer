@@ -21,6 +21,7 @@
 #define __SCHEDULER_HPP
 
 #include "AV.hpp"
+#include "term/InfoOutput.hpp"
 
 namespace AV
 {
@@ -34,6 +35,7 @@ namespace AV
          ~Scheduler();
 
          void add_event_handler(EventHandler::APtr ptr);
+         void add_info_handler(IO::InfoOutput::APtr ptr);
 
          bool active() const;
          void run();
@@ -57,6 +59,7 @@ namespace AV
          bool audio_pts_hack;
 
          std::list<EventHandler::APtr> event_handlers;
+         std::list<IO::InfoOutput::APtr> info_handlers;
          EventHandler::Event next_event();
 
          volatile bool video_thread_active;
@@ -82,6 +85,7 @@ namespace AV
 
          double frame_time() const;
          static double get_time();
+         void show_info();
    };
 }
 

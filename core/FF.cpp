@@ -226,7 +226,7 @@ namespace FF
                AVCodecContext *ctx = fctx->streams[id]->codec;
                if (ctx->codec_id == CODEC_ID_TTF)
                {
-                  sub_info.fonts.push_back(std::make_pair("", std::vector<uint8_t>(ctx->extradata, ctx->extradata + ctx->extradata_size)));
+                  sub_info.fonts.push_back(std::make_pair("", std::vector<char>(ctx->extradata, ctx->extradata + ctx->extradata_size)));
                }
             });
    }
