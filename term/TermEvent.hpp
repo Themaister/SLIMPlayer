@@ -10,10 +10,10 @@ namespace Input
    {
       public:
          TermEvent();
-         ~TermEvent();
-
          void poll();
          EventHandler::Event event();
+      private:
+         EventHandler::Event current;
    };
 }
 
