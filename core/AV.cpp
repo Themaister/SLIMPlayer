@@ -26,11 +26,17 @@ using namespace FF;
 PacketQueue::PacketQueue() : is_final(false)
 {}
 
+PacketQueue::~PacketQueue()
+{
+   cond.notify_all();
+}
+
 void PacketQueue::push(Packet&& in)
 {
    lock.lock();
    queue.push(std::move(in));
    lock.unlock();
+   cond.notify_one();
 }
 
 Packet PacketQueue::pull()
@@ -42,6 +48,7 @@ Packet PacketQueue::pull()
    Packet pkt = std::move(queue.front());
    queue.pop();
    lock.unlock();
+   cond.notify_one();
    return pkt;
 }
 
@@ -71,4 +78,11 @@ void PacketQueue::finalize()
 {
    std::lock_guard<std::mutex> f(lock);
    is_final = true;
+   cond.notify_one();
+}
+
+void PacketQueue::wait()
+{
+   std::unique_lock<std::mutex> lk(cond_lock);
+   cond.wait(lk);
 }

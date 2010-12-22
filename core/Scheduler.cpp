@@ -232,23 +232,22 @@ namespace AV
             return;
 
          case Packet::Type::Audio:
-            // Bad mmay? :) Temporary hack.
-            while (aud_pkt_queue.size() > 16)
-               sync_sleep(0.01);
+            while (aud_pkt_queue.size() > 64)
+               aud_pkt_queue.wait();
 
             aud_pkt_queue.push(std::move(pkt));
             break;
 
          case Packet::Type::Video:
-            while (vid_pkt_queue.size() > 16)
-               sync_sleep(0.01);
+            while (vid_pkt_queue.size() > 64)
+               vid_pkt_queue.wait();
 
             vid_pkt_queue.push(std::move(pkt));
             break;
 
          case Packet::Type::Subtitle:
-            while (sub_pkt_queue.size() > 16)
-               sync_sleep(0.01);
+            while (sub_pkt_queue.size() > 64)
+               sub_pkt_queue.wait();
 
             sub_pkt_queue.push(std::move(pkt));
             break;
@@ -502,7 +501,7 @@ namespace AV
          else
          {
             event->poll(); 
-            sync_sleep(0.01);
+            vid_pkt_queue.wait();
          }
       }
       video_thread_active = false;
@@ -537,8 +536,7 @@ namespace AV
          }
          else
          {
-            //std::cout << "Sync sleeping!" << std::endl;
-            sync_sleep(0.01);
+            aud_pkt_queue.wait();
          }
       }
       audio_thread_active = false;
