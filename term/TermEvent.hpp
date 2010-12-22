@@ -4,7 +4,7 @@
 #include "AV.hpp"
 #include "General.hpp"
 
-namespace Input
+namespace IO
 {
    class TermEvent : public AV::EventHandler, public General::Shared<TermEvent>
    {

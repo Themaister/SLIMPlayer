@@ -6,10 +6,10 @@
 #include <fcntl.h>
 #include <string.h>
 
-using namespace Input;
+using namespace IO;
 using namespace AV;
 
-namespace Input
+namespace IO
 {
    namespace Internal
    {

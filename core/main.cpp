@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <iostream>
 #include "term/TermEvent.hpp"
+#include "term/TermInfoOutput.hpp"
 
 using namespace FF;
 using namespace AV;
@@ -41,7 +42,8 @@ int main(int argc, char *argv[])
    {
       auto media_file = MediaFile::shared(argv[1]);
       AV::Scheduler sched(media_file);
-      sched.add_event_handler(Input::TermEvent::shared());
+      sched.add_event_handler(IO::TermEvent::shared());
+      sched.add_info_handler(IO::TermInfoOutput::shared());
 
       while (sched.active())
       {

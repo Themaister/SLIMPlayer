@@ -145,10 +145,10 @@ namespace AV
       is_paused = false;
    }
 
-   void Scheduler::show_info() const
+   void Scheduler::show_info()
    {
       std::for_each(info_handlers.begin(), info_handlers.end(),
-            [this](Input::InfoOutput::APtr& ptr)
+            [this](IO::InfoOutput::APtr& ptr)
             {
                ptr->output(video_pts, audio_pts, file->video().active, file->audio().active);
             });
@@ -423,13 +423,13 @@ namespace AV
 
    void Scheduler::add_event_handler(EventHandler::APtr handler)
    {
-      std::lock_guard<std::mutex> f(lock);
+      std::lock_guard<std::mutex> f(avlock);
       event_handlers.push_back(handler);
    }
 
-   void Scheduler::add_info_handler(EventHandler::APtr handler)
+   void Scheduler::add_info_handler(IO::InfoOutput::APtr handler)
    {
-      std::lock_guard<std::mutex> f(lock);
+      std::lock_guard<std::mutex> f(avlock);
       info_handlers.push_back(handler);
    }
 
