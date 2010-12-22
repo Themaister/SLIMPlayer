@@ -106,7 +106,11 @@ namespace AV
       vid_pkt_queue.clear();
 
       if (sub_renderer.get() != nullptr)
+      {
+         gfx_lock.lock();
          sub_renderer->flush();
+         gfx_lock.unlock();
+      }
 
       if (has_audio)
       {
@@ -150,7 +154,8 @@ namespace AV
       std::for_each(info_handlers.begin(), info_handlers.end(),
             [this](IO::InfoOutput::APtr& ptr)
             {
-               ptr->output(video_pts, audio_pts, file->video().active, file->audio().active);
+               double time = get_time();
+               ptr->output(video_pts + (time - video_pts_ts), audio_pts + (time - audio_pts_ts), file->video().active, file->audio().active);
             });
    }
 
@@ -308,7 +313,16 @@ namespace AV
 
          video_pts += frame->repeat_pict / (2.0 * frame_time());
 
-         vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
+         if (file->video().ctx->pix_fmt == PIX_FMT_YUV420P)
+         {
+            vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
+         }
+         else // Should fix this up.
+         {
+            std::swap(frame->data[1], frame->data[2]);
+            std::swap(frame->linesize[1], frame->linesize[2]);
+            vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
+         }
       }
    }
 
@@ -399,7 +413,9 @@ namespace AV
                if (sub.rects[i]->ass)
                {
                   // Push our new message to handler queue. We just handle ASS atm, but hey ;)
+                  gfx_lock.lock();
                   sub_renderer->push_msg(sub.rects[i]->ass, video_pts);
+                  gfx_lock.unlock();
                }
             }
          }
@@ -412,12 +428,14 @@ namespace AV
       }
 
       // Print all subtitle currently active in this PTS to screen.
+      gfx_lock.lock();
       auto& list = sub_renderer->msg_list(video_pts);
       std::for_each(list.begin(), list.end(), 
             [&vid](const Message& msg)
             {
                vid->subtitle(msg);
             });
+      gfx_lock.unlock();
    }
 
    void Scheduler::add_event_handler(EventHandler::APtr handler)
