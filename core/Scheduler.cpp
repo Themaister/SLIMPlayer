@@ -240,21 +240,21 @@ namespace AV
             return;
 
          case Packet::Type::Audio:
-            while (aud_pkt_queue.size() > 64)
+            while (aud_pkt_queue.size() > 16 && (vid_pkt_queue.size() > 16 || !has_video))
                aud_pkt_queue.wait();
 
             aud_pkt_queue.push(std::move(pkt));
             break;
 
          case Packet::Type::Video:
-            while (vid_pkt_queue.size() > 64)
+            while (vid_pkt_queue.size() > 16 && (aud_pkt_queue.size() > 16 || !has_audio))
                vid_pkt_queue.wait();
 
             vid_pkt_queue.push(std::move(pkt));
             break;
 
          case Packet::Type::Subtitle:
-            while (sub_pkt_queue.size() > 64)
+            while (sub_pkt_queue.size() > 64 && (aud_pkt_queue.size() > 16 || !has_audio) && (vid_pkt_queue.size() > 16 || !has_video))
                sub_pkt_queue.wait();
 
             sub_pkt_queue.push(std::move(pkt));
