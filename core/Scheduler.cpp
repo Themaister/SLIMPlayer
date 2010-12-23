@@ -522,7 +522,11 @@ namespace AV
          else
          {
             event->poll(); 
-            vid_pkt_queue.wait();
+
+            if (is_paused)
+               sync_sleep(0.01);
+            else
+               vid_pkt_queue.wait();
          }
       }
       video_thread_active = false;
