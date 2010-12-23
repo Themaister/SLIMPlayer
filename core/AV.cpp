@@ -66,6 +66,7 @@ void PacketQueue::clear()
    while (!queue.empty())
       queue.pop();
    lock.unlock();
+   cond.notify_one();
 }
 
 bool PacketQueue::alive() const
