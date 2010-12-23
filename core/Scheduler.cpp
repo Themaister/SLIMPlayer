@@ -155,7 +155,10 @@ namespace AV
             [this](IO::InfoOutput::APtr& ptr)
             {
                double time = get_time();
-               ptr->output(video_pts + (time - video_pts_ts), audio_pts + (time - audio_pts_ts), file->video().active, file->audio().active);
+               if (is_paused)
+                  ptr->output(video_pts, audio_pts, file->video().active, file->audio().active);
+               else
+                  ptr->output(video_pts + (time - video_pts_ts), audio_pts + (time - audio_pts_ts), file->video().active, file->audio().active);
             });
    }
 
