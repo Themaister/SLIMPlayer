@@ -102,8 +102,6 @@ namespace AV
    void Scheduler::perform_seek(double time)
    {
       avlock.lock();
-      aud_pkt_queue.clear();
-      vid_pkt_queue.clear();
 
       if (sub_renderer.get() != nullptr)
       {
@@ -150,6 +148,8 @@ namespace AV
          audio_lock.unlock();
       }
 
+      aud_pkt_queue.clear();
+      vid_pkt_queue.clear();
       avlock.unlock();
       is_paused = false;
    }
@@ -392,9 +392,16 @@ namespace AV
 
    void Scheduler::process_subtitle(Display::APtr&& vid)
    {
-      while (sub_pkt_queue.size() > 0)
+      for (;;)
       {
+         avlock.lock();
+         if (sub_pkt_queue.size() == 0)
+         {
+            avlock.unlock();
+            break;
+         }
          auto packet = sub_pkt_queue.pull();
+         avlock.unlock();
 
          auto& pkt = packet.get();
 
@@ -484,10 +491,11 @@ namespace AV
 
       while (video_thread_active && vid_pkt_queue.alive())
       {
-
+         avlock.lock();
          if (vid_pkt_queue.size() > 0 && !is_paused)
          {
             auto pkt = vid_pkt_queue.pull();
+            avlock.unlock();
             process_video(pkt.get(), vid, frame);
 
             if (file->sub().active)
@@ -536,6 +544,7 @@ namespace AV
          }
          else
          {
+            avlock.unlock();
             event->poll(); 
 
             if (is_paused)
@@ -569,13 +578,16 @@ namespace AV
             audio->unpause();
          }
 
+         avlock.lock();
          if (aud_pkt_queue.size() > 0)
          {
             auto pkt = aud_pkt_queue.pull();
+            avlock.unlock();
             process_audio(pkt.get());
          }
          else
          {
+            avlock.unlock();
             aud_pkt_queue.wait();
          }
       }
