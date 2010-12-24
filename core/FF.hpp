@@ -30,6 +30,16 @@ extern "C" {
 #define __CONCAT(value, suffix) value##suffix
 #endif
 
+#undef INT8_C
+#undef UINT8_C
+#undef INT16_C
+#undef UINT16_C
+#undef INT32_C
+#undef UINT32_C
+#undef INT64_C
+#undef UINT64_C
+#undef INTMAX_C
+#undef UINTMAX_C
 #define INT8_C(value) ((int8_t) value) 
 #define UINT8_C(value) ((uint8_t) __CONCAT(value, U)) 
 #define INT16_C(value) value 

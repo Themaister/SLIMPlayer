@@ -33,25 +33,20 @@
 
 namespace AV
 {
-   class PacketQueue
+   class PacketQueue : public General::ProducerConsumer
    {
       public:
          PacketQueue();
-         ~PacketQueue();
          void push(FF::Packet&& in);
          FF::Packet pull();
          size_t size() const;
          void clear();
          void finalize();
          bool alive() const;
-         void wait() const;
-         void signal() const;
 
       private:
          std::queue<FF::Packet> queue;
          mutable std::mutex lock;
-         mutable std::condition_variable cond;
-         mutable std::mutex cond_lock;
          bool is_final;
    };
 

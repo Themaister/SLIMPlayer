@@ -21,6 +21,8 @@
 #define __GENERAL_HPP
 
 #include <memory>
+#include <mutex>
+#include <condition_variable>
 
 #ifdef GPP_VERSION
 #undef GPP_VERSION
@@ -112,6 +114,20 @@ namespace General
 
    template<class T>
    unsigned RefCounted<T>::cnt = 0;
+
+   class ProducerConsumer
+   {
+      public:
+         ProducerConsumer();
+         ~ProducerConsumer();
+
+         void signal();
+         void wait();
+      private:
+         bool can_sleep;
+         std::condition_variable cond;
+         std::mutex cond_lock;
+   };
 }
 
 #endif

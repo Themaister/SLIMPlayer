@@ -552,9 +552,9 @@ namespace AV
             else
             {
                // Having some race conditions... quickfix it for now.
-               //vid_pkt_queue.wait();
-               sync_sleep(0.01);
-               vid_pkt_queue.signal();
+               vid_pkt_queue.wait();
+               //sync_sleep(0.01);
+               //vid_pkt_queue.signal();
             }
          }
       }
@@ -594,9 +594,9 @@ namespace AV
          {
             avlock.unlock();
             // Having some race conditions, quickfix it for now...
-            //aud_pkt_queue.wait();
-            sync_sleep(0.01);
-            aud_pkt_queue.signal();
+            aud_pkt_queue.wait();
+            //sync_sleep(0.01);
+            //aud_pkt_queue.signal();
          }
       }
       audio_thread_active = false;
