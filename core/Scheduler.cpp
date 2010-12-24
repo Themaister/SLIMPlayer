@@ -130,7 +130,12 @@ namespace AV
 
          // We will seek to this absolute time.
          audio_written = ((has_video ? video_pts : audio_pts) + time) * (file->audio().rate * file->audio().channels * 2);
+         audio_lock.lock();
+         gfx_lock.lock();
          file->seek(video_pts, has_video ? video_pts : audio_pts, time, FF::SeekTarget::Audio);
+         gfx_lock.unlock();
+         audio_lock.unlock();
+
       }
       else
       {
@@ -296,7 +301,9 @@ namespace AV
       uint64_t pts = pkt.pts;
       FF::set_global_pts(pkt.pts);
 
+      gfx_lock.lock();
       avcodec_decode_video2(file->video().ctx, frame, &finished, &pkt);
+      gfx_lock.unlock();
 
       if (pkt.dts == (int64_t)AV_NOPTS_VALUE && frame->opaque && *(uint64_t*)frame->opaque != AV_NOPTS_VALUE)
       {
@@ -343,7 +350,9 @@ namespace AV
       while (pkt.size > 0)
       {
          int out_size = buf.size() - written;
+         audio_lock.lock();
          int ret = avcodec_decode_audio3(file->audio().ctx, reinterpret_cast<int16_t*>(&buf[written]), &out_size, &pkt);
+         audio_lock.unlock();
          if (ret <= 0)
             break;
 
@@ -399,7 +408,9 @@ namespace AV
 
          while (pkt.size > 0)
          {
+            gfx_lock.lock();
             ret = avcodec_decode_subtitle2(file->sub().ctx, &sub, &finished, &pkt);
+            gfx_lock.unlock();
 
             if (ret <= 0)
             {
