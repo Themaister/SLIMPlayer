@@ -82,8 +82,13 @@ void PacketQueue::finalize()
    cond.notify_one();
 }
 
-void PacketQueue::wait()
+void PacketQueue::wait() const
 {
    std::unique_lock<std::mutex> lk(cond_lock);
    cond.wait(lk);
+}
+
+void PacketQueue::signal() const
+{
+   cond.notify_one();
 }

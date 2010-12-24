@@ -44,7 +44,8 @@ namespace AV
          void clear();
          void finalize();
          bool alive() const;
-         void wait();
+         void wait() const;
+         void signal() const;
 
       private:
          std::queue<FF::Packet> queue;

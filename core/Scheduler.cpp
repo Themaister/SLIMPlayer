@@ -550,7 +550,12 @@ namespace AV
             if (is_paused)
                sync_sleep(0.01);
             else
-               vid_pkt_queue.wait();
+            {
+               // Having some race conditions... quickfix it for now.
+               //vid_pkt_queue.wait();
+               sync_sleep(0.01);
+               vid_pkt_queue.signal();
+            }
          }
       }
       video_thread_active = false;
@@ -588,7 +593,10 @@ namespace AV
          else
          {
             avlock.unlock();
-            aud_pkt_queue.wait();
+            // Having some race conditions, quickfix it for now...
+            //aud_pkt_queue.wait();
+            sync_sleep(0.01);
+            aud_pkt_queue.signal();
          }
       }
       audio_thread_active = false;
