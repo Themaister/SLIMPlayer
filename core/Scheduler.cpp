@@ -334,21 +334,25 @@ namespace AV
       if (!has_audio)
          return;
 
-      size_t pkt_size = pkt.size;
+      uint8_t *data = pkt.data;
+      size_t size = pkt.size;
 
       // AVCODEC_MAX_AUDIO_FRAME_SIZE would do, but FFmpeg needs some extra padding-stuff, so why not...
       std::array<uint8_t, AVCODEC_MAX_AUDIO_FRAME_SIZE * 2> buf;
       size_t written = 0;
-      while (pkt_size > 0)
+      while (pkt.size > 0)
       {
          int out_size = buf.size() - written;
          int ret = avcodec_decode_audio3(file->audio().ctx, reinterpret_cast<int16_t*>(&buf[written]), &out_size, &pkt);
          if (ret <= 0)
             break;
 
-         pkt_size -= ret;
+         pkt.size -= ret;
+         pkt.data += ret;
          written += out_size;
       }
+      pkt.data = data;
+      pkt.size = size;
 
       audio_lock.lock();
       audio->write(reinterpret_cast<const int16_t*>(&buf[0]), written / 2);
