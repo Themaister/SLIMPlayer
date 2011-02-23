@@ -53,11 +53,9 @@ namespace Video {
       private:
          uintptr_t width;
          uintptr_t height;
-         bool cg_inited;
+         bool fullscreen;
 
          GLuint gl_tex[4];
-         GLuint pbo;
-         GLuint vbo;
 
          void init_glsl();
 

@@ -88,7 +88,7 @@ namespace Internal
 
 float GL::aspect_ratio = 0.0;
 
-GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_width), height(in_height), cg_inited(false)
+GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_width), height(in_height), fullscreen(false)
 {
    if (SDL_Init(SDL_INIT_VIDEO) < 0)
       throw std::runtime_error("Couldn't init SDL.");
@@ -112,16 +112,14 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
 
    glEnable(GL_TEXTURE_2D);
    glGenTextures(4, gl_tex);
-   glGenBuffers(1, &pbo);
-   glGenBuffers(1, &vbo);
 
    SDL_WM_SetCaption("SLIMPlayer", nullptr);
    SDL_ShowCursor(SDL_DISABLE);
 
    init_glsl();
 
-   glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-   glBufferData(GL_PIXEL_UNPACK_BUFFER, 10 * width * height, NULL, GL_STREAM_DRAW);
+   std::vector<uint8_t> tmp(width * height);
+   std::fill(tmp.begin(), tmp.end(), 0x80);
 
    for (int i = 0; i < 3; i++)
    {
@@ -133,20 +131,13 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
       glTexImage2D(GL_TEXTURE_2D,
-            0, GL_LUMINANCE8, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
+            0, GL_LUMINANCE8, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &tmp[0]);
    }
-
-   std::array<GLfloat, 128> vertex_buf;
-   std::copy(Internal::vertexes, Internal::vertexes + 12, &vertex_buf[0]);
-   std::copy(Internal::tex_coords, Internal::tex_coords + 8, &vertex_buf[32]);
-
-   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertex_buf.size(), &vertex_buf[0], GL_DYNAMIC_DRAW);
 
    glEnableClientState(GL_VERTEX_ARRAY);
    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), nullptr);
-   glTexCoordPointer(2, GL_FLOAT, 2 * sizeof(GLfloat), (GLvoid*)(32 * sizeof(GLfloat)));
+   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), Internal::vertexes);
+   glTexCoordPointer(2, GL_FLOAT, 2 * sizeof(GLfloat), Internal::tex_coords);
 
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
@@ -167,8 +158,8 @@ unsigned GL::get_alignment(unsigned pitch)
 
 void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 {
-   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), nullptr);
-
+   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), Internal::vertexes);
+   glColor4f(1.0, 1.0, 1.0, 1.0);
    glUseProgram(glsl.gl_program);
 
    glClear(GL_COLOR_BUFFER_BIT);
@@ -179,9 +170,6 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
    glUniform2fv(glsl.chroma_shift, 1, chromas);
 
    for (int i = 0; i < 3; i++)
-      glBufferSubData(GL_PIXEL_UNPACK_BUFFER, width * height * i * 2, (pitch[i] * h) >> (i ? ys : 0), data[i]);
-
-   for (int i = 0; i < 3; i++)
    {
       glActiveTexture(GL_TEXTURE0 + i);
       glBindTexture(GL_TEXTURE_2D, gl_tex[i]);
@@ -189,7 +177,7 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
       glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(pitch[i]));
       glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch[i]); 
       glTexSubImage2D(GL_TEXTURE_2D,
-            0, 0, 0, w >> (i ? xs : 0), h >> (i ? ys : 0), GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
+            0, 0, 0, w >> (i ? xs : 0), h >> (i ? ys : 0), GL_LUMINANCE, GL_UNSIGNED_BYTE, data[i]);
    }
 
    glDrawArrays(GL_QUADS, 0, 4);
@@ -208,13 +196,12 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 
 void GL::subtitle(const Sub::Message& msg)
 {
-   glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, msg.rect.w * msg.rect.h, &msg.data[0]);
    glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.rect.stride));
    glPixelStorei(GL_UNPACK_ROW_LENGTH, msg.rect.stride); 
 
    glColor4f(msg.color.r, msg.color.g, msg.color.b, 1.0);
    glTexImage2D(GL_TEXTURE_2D,
-         0, GL_INTENSITY8, msg.rect.w, msg.rect.h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, nullptr);
+         0, GL_INTENSITY8, msg.rect.w, msg.rect.h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &msg.data[0]);
 
    float x_l = (float)msg.rect.x / width;
    float x_h = (float)(msg.rect.x + msg.rect.w) / width;
@@ -228,10 +215,8 @@ void GL::subtitle(const Sub::Message& msg)
       x_h, y_l, 0
    };
 
-   glBufferSubData(GL_ARRAY_BUFFER, 256, sizeof(vertexes), vertexes);
-
+   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), vertexes);
    glDrawArrays(GL_QUADS, 0, 4);
-   glColor4f(1.0, 1.0, 1.0, 1.0);
 }
 
 void GL::set_viewport(unsigned width, unsigned height)
@@ -277,8 +262,6 @@ GL::~GL()
    glDisableClientState(GL_VERTEX_ARRAY);
    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
    glDeleteTextures(4, gl_tex);
-   glDeleteBuffers(1, &pbo);
-   glDeleteBuffers(1, &vbo);
 
    SDL_Quit();
 }
