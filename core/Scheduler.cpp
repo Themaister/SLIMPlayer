@@ -491,6 +491,7 @@ namespace AV
 
       while (video_thread_active && vid_pkt_queue.alive())
       {
+         event->poll(); 
          avlock.lock();
          if (vid_pkt_queue.size() > 0 && !is_paused)
          {
@@ -545,7 +546,6 @@ namespace AV
          else
          {
             avlock.unlock();
-            event->poll(); 
 
             if (is_paused)
                sync_sleep(0.01);

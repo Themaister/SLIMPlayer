@@ -25,6 +25,7 @@
 #include <stdexcept>
 #include <array>
 #include <iostream>
+#include <thread>
 
 using namespace AV::Video;
 using namespace AV;
@@ -115,6 +116,7 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
    glGenBuffers(1, &vbo);
 
    SDL_WM_SetCaption("SLIMPlayer", nullptr);
+   SDL_ShowCursor(SDL_DISABLE);
 
    init_glsl();
 
@@ -333,7 +335,7 @@ void GL::init_glsl()
 
 namespace Internal
 {
-   static const std::vector<std::pair<int, EventHandler::Event>> glfw_cmd = {
+   static const std::vector<std::pair<int, EventHandler::Event>> cmd = {
       {SDLK_ESCAPE, EventHandler::Event::Quit},
       {SDLK_SPACE, EventHandler::Event::Pause},
       {SDLK_LEFT, EventHandler::Event::SeekBack10},
@@ -341,20 +343,52 @@ namespace Internal
       {SDLK_UP, EventHandler::Event::SeekForward60},
       {SDLK_DOWN, EventHandler::Event::SeekBack60}
    };
-
-   static auto current_event = EventHandler::Event::None;
 }
 
-GLEvent::GLEvent() : thr(pthread_self())
+GLEvent::GLEvent() : thread_id(std::this_thread::get_id()), current_event(EventHandler::Event::None)
 {
 }
 
 void GLEvent::poll()
 {
+   if (thread_id == std::this_thread::get_id())
+   {
+      SDL_Event event;
+      while (SDL_PollEvent(&event))
+      {
+         switch (event.type)
+         {
+            case SDL_QUIT:
+               current_event = EventHandler::Event::Quit;
+               break;
+
+            case SDL_KEYDOWN:
+               for (auto itr = Internal::cmd.begin(); itr != Internal::cmd.end(); ++itr)
+               {
+                  if (itr->first == event.key.keysym.sym)
+                  {
+                     current_event = itr->second;
+                     break;
+                  }
+               }
+               break;
+
+            case SDL_VIDEORESIZE:
+               SDL_SetVideoMode(event.resize.w, event.resize.h, 0, SDL_OPENGL | SDL_RESIZABLE);
+               GL::set_viewport(event.resize.w, event.resize.h);
+               break;
+
+            default:
+               break;
+         }
+      }
+   }
 }
 
 EventHandler::Event GLEvent::event()
 {
-   return EventHandler::Event::None;
+   auto ret = current_event;
+   current_event = EventHandler::Event::None;
+   return ret;
 }
 

@@ -31,10 +31,11 @@
 #define NO_SDL_GLEXT
 #include "SDL.h"
 #include "SDL_opengl.h"
-#include <pthread.h>
 
 namespace AV {
 namespace Video {
+
+   class GLEvent;
 
    class GL : public Display, public General::Shared<GL>
    {
@@ -73,6 +74,7 @@ namespace Video {
          static void print_linker_log(GLuint obj);
 
          static float aspect_ratio;
+         friend class GLEvent;
    };
 
    class GLEvent : public AV::EventHandler, public General::Shared<GLEvent>
@@ -82,8 +84,8 @@ namespace Video {
          Event event();
          void poll();
       private:
-         // Find C++0x solution for this!
-         pthread_t thr;
+         std::thread::id thread_id;
+         EventHandler::Event current_event;
    };
 
 }}
