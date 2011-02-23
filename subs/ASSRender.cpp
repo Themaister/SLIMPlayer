@@ -55,20 +55,17 @@ namespace AV
 
 Message ASSRenderer::create_message(ASS_Image *img)
 {
-   std::vector<uint32_t> data(img->w * img->h);
+   float r = (img->color >> 24 & 0xFF) / 256.0;
+   float g = (img->color >> 16 & 0xFF) / 256.0; 
+   float b = (img->color >> 8  & 0xFF) / 256.0;
 
-   std::fill(data.begin(), data.end(), img->color);
-
-   int stride = img->stride;
-   for (int y = 0; y < img->h; y++)
-   {
-      for (int x = 0; x < img->w; x++)
-      {
-         data[y * img->w + x] = (0xFFFFFF00U & data[y * img->w + x]) | img->bitmap[y * stride + x];
-      }
-   }
-
-   return Message(img->dst_x, img->dst_y, img->w, img->h, &data[0]);
+   return 
+      Message
+      (
+         Rect(img->dst_x, img->dst_y, img->w, img->h, img->stride), 
+         Color(r, g, b), 
+         img->bitmap
+      );
 }
 
 ASSRenderer::ASSRenderer(const std::vector<std::pair<std::string, std::vector<char>>>& fonts, const std::vector<char>& ass_data, unsigned width, unsigned height)

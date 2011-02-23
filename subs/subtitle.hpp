@@ -30,20 +30,34 @@ namespace AV
 {
    namespace Sub
    {
+      struct Rect
+      {
+         Rect(unsigned _x, unsigned _y, unsigned _w, unsigned _h, unsigned _stride) 
+            : x(_x), y(_y), w(_w), h(_h), stride(_stride) {}
+         unsigned x, y, w, h, stride;
+      };
+
+      struct Color
+      {
+         Color(float _r, float _g, float _b) 
+            : r(_r), g(_g), b(_b) {}
+         float r, g, b;
+      };
+
       // A message to the screen. Float values are relative [0.0, 1.0]. Picture format is YV12.
       struct Message : public General::Shared<Message>
       {
-         Message(unsigned in_x, unsigned in_y, unsigned in_w, unsigned in_h,
-               const uint32_t *in_data) :
-            x(in_x), y(in_y), w(in_w), h(in_h)
+         Message(const Rect& in_rect, const Color& in_color, const uint8_t *in_data) :
+            rect(in_rect), color(in_color)
          {
-            data = std::vector<uint32_t>(in_data, in_data + w * h);
+            data = std::vector<uint8_t>(in_data, in_data + rect.stride * rect.h);
          }
 
          Message(Message&&) = default;
 
-         unsigned x, y, w, h;
-         std::vector<uint32_t> data;
+         Rect rect;
+         Color color;
+         std::vector<uint8_t> data;
       };
 
       class Renderer : public General::SharedAbstract<Renderer>

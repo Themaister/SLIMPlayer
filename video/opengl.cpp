@@ -208,17 +208,18 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 
 void GL::subtitle(const Sub::Message& msg)
 {
-   glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, msg.w * msg.h * 4, &msg.data[0]);
-   glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.w * 4));
-   glPixelStorei(GL_UNPACK_ROW_LENGTH, msg.w); 
+   glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, msg.rect.w * msg.rect.h, &msg.data[0]);
+   glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.rect.stride));
+   glPixelStorei(GL_UNPACK_ROW_LENGTH, msg.rect.stride); 
 
+   glColor4f(msg.color.r, msg.color.g, msg.color.b, 1.0);
    glTexImage2D(GL_TEXTURE_2D,
-         0, GL_RGBA, msg.w, msg.h, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, nullptr);
+         0, GL_INTENSITY8, msg.rect.w, msg.rect.h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, nullptr);
 
-   float x_l = (float)msg.x / width;
-   float x_h = (float)(msg.x + msg.w) / width;
-   float y_h = (float)(height - msg.y) / height;
-   float y_l = (float)(height - msg.y - msg.h) / height;
+   float x_l = (float)msg.rect.x / width;
+   float x_h = (float)(msg.rect.x + msg.rect.w) / width;
+   float y_h = (float)(height - msg.rect.y) / height;
+   float y_l = (float)(height - msg.rect.y - msg.rect.h) / height;
 
    const GLfloat vertexes[] = {
       x_l, y_l, 0,
@@ -230,6 +231,7 @@ void GL::subtitle(const Sub::Message& msg)
    glBufferSubData(GL_ARRAY_BUFFER, 256, sizeof(vertexes), vertexes);
 
    glDrawArrays(GL_QUADS, 0, 4);
+   glColor4f(1.0, 1.0, 1.0, 1.0);
 }
 
 void GL::set_viewport(unsigned width, unsigned height)
