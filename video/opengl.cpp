@@ -19,164 +19,65 @@
 
 #include "opengl.hpp"
 
-#define GL_GLEXT_PROTOTYPES
-#include <GL/glfw.h>
-#include <GL/glext.h>
-
-#include <Cg/cg.h>
-#include <Cg/cgGL.h>
-
 #include <algorithm>
 #include <utility>
 #include <vector>
 #include <stdexcept>
 #include <array>
+#include <iostream>
 
 using namespace AV::Video;
 using namespace AV;
 
-namespace Internal 
+#define CHECK_GL_ERROR() do { \
+   if (glGetError() != GL_NO_ERROR) \
+      throw std::runtime_error(General::join("GL failed at line: ", __LINE__, "...")); \
+} while(0)
+
+namespace Internal
 {
-   static const char* cg_program = 
-      "void main_vertex"
+   static const char* glsl_program = 
+      "const mat3 yuv2mat = mat3"
       "("
-      " float4 position	: POSITION,"
-      " float4 color	: COLOR,"
-      " float2 texCoord : TEXCOORD0,"
-      ""
-      " uniform float4x4 modelViewProj,"
-      ""
-      " out float4 oPosition : POSITION,"
-      " out float4 oColor    : COLOR,"
-      " out float2 otexCoord : TEXCOORD"
-      " )"
-      "{"
-      "   oPosition = mul(modelViewProj, position);"
-      "   oColor = color;"
-      "   otexCoord = texCoord;"
-      "}"
-      ""
-      ""
-      "struct output"
-      "{"
-      "   float4 color : COLOR;"
-      "};"
-      ""
-      "static const float3x3 yuv2mat = float3x3"
-      "("
-      "    1,   0,          1.13983,"
-      "    1,   -0.39465,   -0.58060,"
-      "    1,   2.03211,    0"
+      "    1,        1,          1,"
+      "    0,        -0.39465,   2.03211,"
+      "    1.13983,  -0.58060,   0"
       ");"
       ""
-      "float4 yuv2rgb(float3 yuv)"
+      "vec4 yuv2rgb(vec3 yuv)"
       "{"
-      "   float3 ret = mul(yuv2mat, yuv);"
-      "   return float4(ret, 1.0);"
+      "   vec3 ret = yuv2mat * yuv;"
+      "   return vec4(ret, 1.0);"
       "}"
       ""
-      "uniform sampler2D tex_y : TEXUNIT0;"
-      "uniform sampler2D tex_u : TEXUNIT1;"
-      "uniform sampler2D tex_v : TEXUNIT2;"
-      "uniform float2 chroma_shift;"
+      "uniform sampler2D tex_y;"
+      "uniform sampler2D tex_u;"
+      "uniform sampler2D tex_v;"
+      "uniform vec2 chroma_shift;"
       ""
-      ""
-      "float4 yuvTEX(float2 coord)"
+      "vec4 yuvTEX(vec2 coord)"
       "{"
-      "   float3 yuv;"
-      "   yuv.x = tex2D(tex_y, coord).x;"
-      "   yuv.y = tex2D(tex_u, chroma_shift.x * coord).x - 0.5;"
-      "   yuv.z = tex2D(tex_v, chroma_shift.y * coord).x - 0.5;"
+      "   vec3 yuv;"
+      "   yuv.x = texture2D(tex_y, coord).x;"
+      "   yuv.y = texture2D(tex_u, chroma_shift.x * coord).x - 0.5;"
+      "   yuv.z = texture2D(tex_v, chroma_shift.y * coord).x - 0.5;"
       "   return yuv2rgb(yuv);"
       "}"
       ""
-      "output main_fragment (float2 tex : TEXCOORD0)"
+      "void main()"
       "{"
-      "   output OUT;"
-      "   float4 res = yuvTEX(tex);"
-      "   OUT.color = res;" 
-      "   return OUT;"
+      "   vec4 res = yuvTEX(gl_TexCoord[0].xy);"
+      "   gl_FragColor = res;" 
       "}";
 
-   static const char* stock_cg_program =
-      "void main_vertex"
-      "("
-      "	float4 position	: POSITION,"
-      "	float4 color	: COLOR,"
-      "	float2 texCoord : TEXCOORD0,"
-      ""
-      "  uniform float4x4 modelViewProj,"
-      ""
-      "	out float4 oPosition : POSITION,"
-      "	out float4 oColor    : COLOR,"
-      "	out float2 otexCoord : TEXCOORD"
-      ")"
-      "{"
-      "	oPosition = mul(modelViewProj, position);"
-      "	oColor = color;"
-      "	otexCoord = texCoord;"
-      "}"
-      ""
-      ""
-      "struct output "
-      "{"
-      "  float4 color    : COLOR;"
-      "};"
-      ""
-      "output main_fragment(float2 texCoord : TEXCOORD0, uniform sampler2D decal : TEXUNIT0) "
-      "{"
-      "   output OUT;"
-      "   OUT.color = tex2D(decal, texCoord);"
-      "   return OUT;"
-      "}";
-
-   static float aspect_ratio;
-
-   extern "C" {
-      static void GLFWCALL resize(int, int);
-   }
-
-   static void GLFWCALL resize(int width, int height)
-   {
-      float desired_aspect;
-      float device_aspect;
-      float delta;
-
-      glMatrixMode(GL_PROJECTION);
-      glLoadIdentity();
-
-      desired_aspect = aspect_ratio;
-      device_aspect = (float)width / height;
-
-      // If the aspect ratios of screen and desired aspect ratio are sufficiently equal (floating point stuff), 
-      // assume they are actually equal.
-      if ( (int)(device_aspect*1000) > (int)(desired_aspect*1000) )
-      {
-         delta = (desired_aspect / device_aspect - 1.0) / 2.0 + 0.5;
-         glViewport(width * (0.5 - delta), 0, 2.0 * width * delta, height);
-      }
-
-      else if ( (int)(device_aspect*1000) < (int)(desired_aspect*1000) )
-      {
-         delta = (device_aspect / desired_aspect - 1.0) / 2.0 + 0.5;
-         glViewport(0, height * (0.5 - delta), width, 2.0 * height * delta);
-      }
-      else
-         glViewport(0, 0, width, height);
-
-      glOrtho(0, 1, 0, 1, -1, 1);
-      glMatrixMode(GL_MODELVIEW);
-      glLoadIdentity();
-   }
-
-   static const GLfloat vertexes[] = {
+   constexpr static GLfloat vertexes[12] = {
       0, 0, 0,
       0, 1, 0,
       1, 1, 0,
       1, 0, 0
    };
 
-   static const GLfloat tex_coords[] = {
+   constexpr static GLfloat tex_coords[8] = {
       0, 1,
       0, 0,
       1, 0,
@@ -184,19 +85,22 @@ namespace Internal
    };
 }
 
-GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_width), height(in_height), aspect_ratio(in_aspect_ratio), cg_inited(false)
+float GL::aspect_ratio = 0.0;
+
+GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_width), height(in_height), cg_inited(false)
 {
-   glfwInit();
+   if (SDL_Init(SDL_INIT_VIDEO) < 0)
+      throw std::runtime_error("Couldn't init SDL.");
 
-   if(glfwOpenWindow(width, height, 0, 0, 0, 0, 0, 0, GLFW_WINDOW) != GL_TRUE)
-   {
-      throw std::runtime_error("Failed to init GLFW.\n");
-   }
+   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+   SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);
 
-   Internal::aspect_ratio = aspect_ratio;
+   if (!SDL_SetVideoMode(in_width, in_height, 0, SDL_OPENGL | SDL_RESIZABLE))
+      throw std::runtime_error("Failed to init GL Window.");
 
-   glfwSetWindowSizeCallback(Internal::resize);
-   glfwSwapInterval(1);
+   aspect_ratio = in_aspect_ratio;
+
+   set_viewport(in_width, in_height);
 
    glDisable(GL_DITHER);
    glDisable(GL_DEPTH_TEST);
@@ -210,17 +114,12 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
    glGenBuffers(1, &pbo);
    glGenBuffers(1, &vbo);
 
-   glfwSetWindowTitle("SLIMPlayer");
+   SDL_WM_SetCaption("SLIMPlayer", nullptr);
 
-   init_cg();
-
-   std::vector<uint8_t> buf(10 * width * height);
-   std::fill(buf.begin(), buf.begin() + 6 * width * height, 0x80);
-   std::fill(buf.begin() + 6 * width * height, buf.end(), 0);
-
+   init_glsl();
 
    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-   glBufferData(GL_PIXEL_UNPACK_BUFFER, 10 * width * height, &buf[0], GL_STREAM_DRAW);
+   glBufferData(GL_PIXEL_UNPACK_BUFFER, 10 * width * height, NULL, GL_STREAM_DRAW);
 
    for (int i = 0; i < 3; i++)
    {
@@ -249,9 +148,11 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
 
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
+
+   CHECK_GL_ERROR();
 }
 
-int GL::get_alignment(int pitch)
+unsigned GL::get_alignment(unsigned pitch)
 {
    if (pitch & 1)
       return 1;
@@ -265,19 +166,18 @@ int GL::get_alignment(int pitch)
 void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 {
    glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), nullptr);
-   cgGLBindProgram(cg.cgFPrg);
-   cgGLBindProgram(cg.cgVPrg);
+
+   glUseProgram(glsl.gl_program);
 
    glClear(GL_COLOR_BUFFER_BIT);
 
    // YUV420P
    int xs = 1, ys = 1;
-   cgSetParameter2f(cg.chroma_shift, 0.5, 0.5);
+   float chromas[2] = {0.5, 0.5};
+   glUniform2fv(glsl.chroma_shift, 1, chromas);
 
    for (int i = 0; i < 3; i++)
-   {
       glBufferSubData(GL_PIXEL_UNPACK_BUFFER, width * height * i * 2, (pitch[i] * h) >> (i ? ys : 0), data[i]);
-   }
 
    for (int i = 0; i < 3; i++)
    {
@@ -290,11 +190,9 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
             0, 0, 0, w >> (i ? xs : 0), h >> (i ? ys : 0), GL_LUMINANCE, GL_UNSIGNED_BYTE, (void*)(width * height * i * 2));
    }
 
-   glFlush();
    glDrawArrays(GL_QUADS, 0, 4);
 
-   cgGLBindProgram(cg.cgSFPrg);
-   cgGLBindProgram(cg.cgSVPrg);
+   glUseProgram(0);
 
    glActiveTexture(GL_TEXTURE0);
    glBindTexture(GL_TEXTURE_2D, gl_tex[3]);
@@ -329,134 +227,134 @@ void GL::subtitle(const Sub::Message& msg)
 
    glBufferSubData(GL_ARRAY_BUFFER, 256, sizeof(vertexes), vertexes);
 
-   glFlush();
    glDrawArrays(GL_QUADS, 0, 4);
+}
+
+void GL::set_viewport(unsigned width, unsigned height)
+{
+   float desired_aspect;
+   float device_aspect;
+   float delta;
+
+   glMatrixMode(GL_PROJECTION);
+   glLoadIdentity();
+
+   desired_aspect = aspect_ratio;
+   device_aspect = (float)width / height;
+
+   // If the aspect ratios of screen and desired aspect ratio are sufficiently equal (floating point stuff), 
+   // assume they are actually equal.
+   if ( (int)(device_aspect*1000) > (int)(desired_aspect*1000) )
+   {
+      delta = (desired_aspect / device_aspect - 1.0) / 2.0 + 0.5;
+      glViewport(width * (0.5 - delta), 0, 2.0 * width * delta, height);
+   }
+
+   else if ( (int)(device_aspect*1000) < (int)(desired_aspect*1000) )
+   {
+      delta = (device_aspect / desired_aspect - 1.0) / 2.0 + 0.5;
+      glViewport(0, height * (0.5 - delta), width, 2.0 * height * delta);
+   }
+   else
+      glViewport(0, 0, width, height);
+
+   glOrtho(0, 1, 0, 1, -1, 1);
+   glMatrixMode(GL_MODELVIEW);
+   glLoadIdentity();
 }
 
 void GL::flip()
 {
-   glfwSwapBuffers();
+   SDL_GL_SwapBuffers();
 }
 
 GL::~GL()
 {
-   uninit_cg();
    glDisableClientState(GL_VERTEX_ARRAY);
    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
    glDeleteTextures(4, gl_tex);
    glDeleteBuffers(1, &pbo);
    glDeleteBuffers(1, &vbo);
 
-   glfwTerminate();
+   SDL_Quit();
 }
 
-void GL::init_cg()
+void GL::print_shader_log(GLuint obj)
 {
-   cg.cgCtx = cgCreateContext();
-   if (cg.cgCtx == nullptr)
-   {
-      throw std::runtime_error("Failed to create Cg context\n");
-   }
-   cg.cgFProf = cgGLGetLatestProfile(CG_GL_FRAGMENT);
-   cg.cgVProf = cgGLGetLatestProfile(CG_GL_VERTEX);
-   if (cg.cgFProf == CG_PROFILE_UNKNOWN || cg.cgVProf == CG_PROFILE_UNKNOWN)
-   {
-      throw std::runtime_error("Cg: Invalid profile type\n");
-   }
-   cgGLSetOptimalOptions(cg.cgFProf);
-   cgGLSetOptimalOptions(cg.cgVProf);
-   cg.cgFPrg = cgCreateProgram(cg.cgCtx, CG_SOURCE, Internal::cg_program, cg.cgFProf, "main_fragment", 0);
-   cg.cgVPrg = cgCreateProgram(cg.cgCtx, CG_SOURCE, Internal::cg_program, cg.cgVProf, "main_vertex", 0);
-   cg.cgSFPrg = cgCreateProgram(cg.cgCtx, CG_SOURCE, Internal::stock_cg_program, cg.cgFProf, "main_fragment", 0);
-   cg.cgSVPrg = cgCreateProgram(cg.cgCtx, CG_SOURCE, Internal::stock_cg_program, cg.cgVProf, "main_vertex", 0);
-   if (cg.cgFPrg == nullptr || cg.cgVPrg == nullptr || cg.cgSVPrg == nullptr || cg.cgSFPrg == nullptr)
-   {
-      throw std::runtime_error("Cg compile error\n");
-   }
+   int info_len = 0;
+   int max_len;
 
-   cgGLLoadProgram(cg.cgFPrg);
-   cgGLLoadProgram(cg.cgVPrg);
-   cgGLLoadProgram(cg.cgSFPrg);
-   cgGLLoadProgram(cg.cgSVPrg);
-   cgGLEnableProfile(cg.cgFProf);
-   cgGLEnableProfile(cg.cgVProf);
-   cgGLBindProgram(cg.cgFPrg);
-   cgGLBindProgram(cg.cgVPrg);
+   glGetShaderiv(obj, GL_INFO_LOG_LENGTH, &max_len);
 
-   CGparameter cg_mvp_matrix = cgGetNamedParameter(cg.cgVPrg, "modelViewProj");
-   CGparameter cg_mvp_matrix_s = cgGetNamedParameter(cg.cgSVPrg, "modelViewProj");
-   cg.chroma_shift = cgGetNamedParameter(cg.cgFPrg, "chroma_shift");
-   cgGLSetStateMatrixParameter(cg_mvp_matrix, CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
-   cgGLSetStateMatrixParameter(cg_mvp_matrix_s, CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
-   cg_inited = true;
+   std::vector<char> info_log(max_len + 1);
+   glGetShaderInfoLog(obj, max_len, &info_len, &info_log[0]);
+
+   if (info_len > 0)
+      std::cerr << "Shader log: " << &info_log[0] << std::endl;
+
 }
 
-void GL::uninit_cg()
+void GL::print_linker_log(GLuint obj)
 {
-   if (cg_inited)
-   {
-      cgDestroyContext(cg.cgCtx);
-      cg_inited = false;
-   }
+   int info_len = 0;
+   int max_len;
+
+   glGetProgramiv(obj, GL_INFO_LOG_LENGTH, &max_len);
+
+   std::vector<char> info_log(max_len + 1);
+   glGetProgramInfoLog(obj, max_len, &info_len, &info_log[0]);
+
+   if (info_len > 0)
+      std::cerr << "Linker log: " << &info_log[0] << std::endl;
+}
+
+void GL::init_glsl()
+{
+   glsl.gl_program = glCreateProgram();
+   glsl.fragment_program = glCreateShader(GL_FRAGMENT_SHADER);
+   glShaderSource(glsl.fragment_program, 1, static_cast<const char**>(&Internal::glsl_program), 0);
+   glCompileShader(glsl.fragment_program);
+   glAttachShader(glsl.gl_program, glsl.fragment_program);
+   print_shader_log(glsl.fragment_program);
+
+   glLinkProgram(glsl.gl_program);
+   glUseProgram(glsl.gl_program);
+   print_linker_log(glsl.gl_program);
+
+   glsl.chroma_shift = glGetUniformLocation(glsl.gl_program, "chroma_shift");
+
+   GLint loc = glGetUniformLocation(glsl.gl_program, "tex_y");
+   glUniform1i(loc, 0);
+   loc = glGetUniformLocation(glsl.gl_program, "tex_u");
+   glUniform1i(loc, 1);
+   loc = glGetUniformLocation(glsl.gl_program, "tex_v");
+   glUniform1i(loc, 2);
 }
 
 namespace Internal
 {
    static const std::vector<std::pair<int, EventHandler::Event>> glfw_cmd = {
-      {GLFW_KEY_ESC, EventHandler::Event::Quit},
-      {GLFW_KEY_SPACE, EventHandler::Event::Pause},
-      {GLFW_KEY_LEFT, EventHandler::Event::SeekBack10},
-      {GLFW_KEY_RIGHT, EventHandler::Event::SeekForward10},
-      {GLFW_KEY_UP, EventHandler::Event::SeekForward60},
-      {GLFW_KEY_DOWN, EventHandler::Event::SeekBack60}
+      {SDLK_ESCAPE, EventHandler::Event::Quit},
+      {SDLK_SPACE, EventHandler::Event::Pause},
+      {SDLK_LEFT, EventHandler::Event::SeekBack10},
+      {SDLK_RIGHT, EventHandler::Event::SeekForward10},
+      {SDLK_UP, EventHandler::Event::SeekForward60},
+      {SDLK_DOWN, EventHandler::Event::SeekBack60}
    };
 
    static auto current_event = EventHandler::Event::None;
-
-   extern "C" {
-      static GLFWCALL void keypress_cb(int, int);
-      static GLFWCALL int winclose_cb();
-   }
-
-   static GLFWCALL void keypress_cb(int key, int action)
-   {
-      if (action == GLFW_RELEASE)
-         return;
-
-      auto itr = std::find_if(glfw_cmd.begin(), glfw_cmd.end(), 
-            [key](const std::pair<int, EventHandler::Event>& event)
-            {
-               return key == event.first;
-            });
-
-      if (itr != glfw_cmd.end())
-         current_event = itr->second;
-   }
-
-   static GLFWCALL int winclose_cb()
-   {
-      current_event = EventHandler::Event::Quit;
-      return GL_FALSE;
-   }
 }
 
 GLEvent::GLEvent() : thr(pthread_self())
 {
-   glfwSetKeyCallback(Internal::keypress_cb);
-   glfwSetWindowCloseCallback(Internal::winclose_cb);
 }
 
 void GLEvent::poll()
 {
-   // Need to do this in same thread as GL. :(
-   if (pthread_equal(pthread_self(), thr))
-      glfwPollEvents();
 }
 
 EventHandler::Event GLEvent::event()
 {
-   auto tmp = Internal::current_event;
-   Internal::current_event = EventHandler::Event::None;
-   return tmp;
+   return EventHandler::Event::None;
 }
 

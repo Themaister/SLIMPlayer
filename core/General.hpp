@@ -23,6 +23,8 @@
 #include <memory>
 #include <mutex>
 #include <condition_variable>
+#include <string>
+#include <sstream>
 
 #ifdef GPP_VERSION
 #undef GPP_VERSION
@@ -128,6 +130,22 @@ namespace General
          std::condition_variable cond;
          std::mutex cond_lock;
    };
+
+   template <class T>
+   std::string join(const T& t)
+   {
+      std::ostringstream stream;
+      stream << t;
+      return stream.str();
+   }
+
+   template <class T, class R, class... P>
+   std::string join(const T& t, const R& r, const P&... p)
+   {
+      std::ostringstream stream;
+      stream << t << join(r, p...);
+      return stream.str();
+   }
 }
 
 #endif

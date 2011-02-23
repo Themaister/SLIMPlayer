@@ -26,8 +26,11 @@
 #include "subs/subtitle.hpp"
 
 #define GL_GLEXT_PROTOTYPES
-#include <Cg/cg.h>
-#include <GL/glfw.h>
+#include <GL/gl.h>
+#include <GL/glext.h>
+#define NO_SDL_GLEXT
+#include "SDL.h"
+#include "SDL_opengl.h"
 #include <pthread.h>
 
 namespace AV {
@@ -49,29 +52,27 @@ namespace Video {
       private:
          uintptr_t width;
          uintptr_t height;
-         float aspect_ratio;
          bool cg_inited;
 
          GLuint gl_tex[4];
          GLuint pbo;
          GLuint vbo;
 
-         void init_cg();
-         void uninit_cg();
+         void init_glsl();
 
          struct
          {
-            CGcontext cgCtx;
-            CGprogram cgFPrg;
-            CGprogram cgVPrg;
-            CGprogram cgSFPrg;
-            CGprogram cgSVPrg;
-            CGprofile cgFProf;
-            CGprofile cgVProf;
-            CGparameter chroma_shift;
-         } cg;
+            GLuint gl_program;
+            GLuint fragment_program;
+            GLint chroma_shift;
+         } glsl;
 
-         static int get_alignment(int pitch);
+         static unsigned get_alignment(unsigned pitch);
+         static void set_viewport(unsigned width, unsigned height);
+         static void print_shader_log(GLuint obj);
+         static void print_linker_log(GLuint obj);
+
+         static float aspect_ratio;
    };
 
    class GLEvent : public AV::EventHandler, public General::Shared<GLEvent>

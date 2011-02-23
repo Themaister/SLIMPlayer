@@ -6,9 +6,9 @@ TARGET_SRC := $(wildcard */*.cpp)
 TARGET_OBJ := $(TARGET_SRC:.cpp=.o)
 HEADERS := $(wildcard */*.hpp)
 
-LIBS := -lasound -lglfw -lCg -lCgGL -lass
+LIBS := -lasound $(shell sdl-config --libs) -lass -lGL
 FFMPEG_LIBS := -lavutil -lavformat -lavcodec
-INCDIRS := -I. -Icore
+INCDIRS := -I. -Icore $(shell sdl-config --cflags)
 
 CXX := g++ -std=gnu++0x -Wall -O3 -g
 
