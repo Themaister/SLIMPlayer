@@ -72,6 +72,7 @@ namespace AV
 
          std::thread video_thread;
          std::thread audio_thread;
+         Video::Display::APtr video;
          Audio::Stream<int16_t>::APtr audio;
 
          void perform_seek(double delta);

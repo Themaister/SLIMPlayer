@@ -88,10 +88,14 @@ namespace Internal
 
 float GL::aspect_ratio = 0.0;
 
-GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_width), height(in_height), fullscreen(false)
+GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_width), height(in_height), fullscreen(false), do_fullscreen(false)
 {
    if (SDL_Init(SDL_INIT_VIDEO) < 0)
       throw std::runtime_error("Couldn't init SDL.");
+
+   auto video_info = SDL_GetVideoInfo();
+   fullscreen_x = video_info->current_w;
+   fullscreen_y = video_info->current_h;
 
    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
    SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);
@@ -154,6 +158,12 @@ unsigned GL::get_alignment(unsigned pitch)
    if (pitch & 4)
       return 4;
    return 8;
+}
+
+void GL::toggle_fullscreen()
+{
+   fullscreen = !fullscreen;
+   do_fullscreen = true;
 }
 
 void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
@@ -255,6 +265,21 @@ void GL::set_viewport(unsigned width, unsigned height)
 void GL::flip()
 {
    SDL_GL_SwapBuffers();
+
+   if (do_fullscreen)
+   {
+      if (fullscreen)
+      {
+         SDL_SetVideoMode(fullscreen_x, fullscreen_y, 0, SDL_OPENGL | SDL_RESIZABLE);
+         set_viewport(fullscreen_x, fullscreen_y);
+      }
+      else
+      {
+         SDL_SetVideoMode(width, height, 0, SDL_OPENGL | SDL_RESIZABLE);
+         set_viewport(width, height);
+      }
+   }
+   do_fullscreen = false;
 }
 
 GL::~GL()
@@ -326,7 +351,8 @@ namespace Internal
       {SDLK_LEFT, EventHandler::Event::SeekBack10},
       {SDLK_RIGHT, EventHandler::Event::SeekForward10},
       {SDLK_UP, EventHandler::Event::SeekForward60},
-      {SDLK_DOWN, EventHandler::Event::SeekBack60}
+      {SDLK_DOWN, EventHandler::Event::SeekBack60},
+      {SDLK_f, EventHandler::Event::Fullscreen},
    };
 }
 

@@ -215,6 +215,11 @@ namespace AV
             perform_seek(60.0);
             break;
 
+         case EventHandler::Event::Fullscreen:
+            if (video_thread_active)
+               video->toggle_fullscreen();
+            break;
+
          case EventHandler::Event::None:
             break;
 
@@ -479,6 +484,7 @@ namespace AV
    void Scheduler::video_thread_fn()
    {
       auto vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
+      video = vid;
       auto event = GLEvent::shared();
 
       if (file->sub().active)

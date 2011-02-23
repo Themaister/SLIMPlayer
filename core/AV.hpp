@@ -61,6 +61,7 @@ namespace AV
             SeekForward10,
             SeekBack60,
             SeekForward60,
+            Fullscreen,
             None,
          };
 

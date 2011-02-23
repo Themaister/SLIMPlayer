@@ -48,12 +48,16 @@ namespace Video {
          void frame(const uint8_t * const * data, const int *pitch, int w, int h);
          void subtitle(const AV::Sub::Message& msg);
          void flip();
+         void toggle_fullscreen();
 
          ~GL();
       private:
-         uintptr_t width;
-         uintptr_t height;
+         unsigned width;
+         unsigned height;
+         unsigned fullscreen_x;
+         unsigned fullscreen_y;
          bool fullscreen;
+         bool do_fullscreen;
 
          GLuint gl_tex[4];
 

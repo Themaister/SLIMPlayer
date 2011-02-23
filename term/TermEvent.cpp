@@ -24,6 +24,7 @@ namespace IO
          { "\e[B", EventHandler::Event::SeekBack60},
          { "\e[A", EventHandler::Event::SeekForward60},
          { "\e[C", EventHandler::Event::SeekForward10},
+         { "f", EventHandler::Event::Fullscreen},
          { "\e", EventHandler::Event::Quit}
       };
    }

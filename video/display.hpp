@@ -38,6 +38,7 @@ namespace AV
             virtual void frame(const uint8_t * const * data, const int *pitch, int w, int h) = 0;
             virtual void subtitle(const Sub::Message& sub) = 0;
             virtual void flip() = 0;
+            virtual void toggle_fullscreen() = 0;
 
             virtual ~Display() {}
       };
