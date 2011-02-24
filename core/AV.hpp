@@ -50,6 +50,44 @@ namespace AV
          bool is_final;
    };
 
+   template <class T>
+   class AlignedBuffer
+   {
+      public:
+         AlignedBuffer(size_t in_size) : m_buf((T*)av_mallocz(in_size * sizeof(T))), m_size(in_size) {}
+
+         AlignedBuffer(const AlignedBuffer& in_buf) { *this = in_buf; }
+         AlignedBuffer(AlignedBuffer&& in_buf) { *this = std::move(in_buf); }
+
+         AlignedBuffer& operator=(const AlignedBuffer& in_buf)
+         {
+            resize(in_buf.size());
+            std::copy(&in_buf[0], &in_buf[0] + in_buf.size(), m_buf);
+            return *this;
+         }
+
+         AlignedBuffer& operator=(AlignedBuffer&& in_buf)
+         {
+            if (m_buf) av_free(m_buf);
+            m_buf = in_buf.m_buf;
+            m_size = in_buf.m_size;
+            in_buf.m_buf = nullptr;
+            in_buf.m_size = 0;
+
+            return *this;
+         }
+
+         T& operator[](size_t index) { return m_buf[index]; }
+         const T& operator[](size_t index) const { return m_buf[index]; }
+
+         size_t size() const { return m_size; }
+         void resize(size_t in_size) { m_buf = av_realloc(m_buf, in_size * sizeof(T)); m_size = size; }
+
+      private:
+         T *m_buf;
+         size_t m_size;
+   };
+
    class EventHandler : public General::SharedAbstract<EventHandler>
    {
       public:

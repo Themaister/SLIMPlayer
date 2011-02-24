@@ -341,7 +341,7 @@ namespace AV
       }
    }
 
-   void Scheduler::process_audio(AVPacket& pkt)
+   void Scheduler::process_audio(AVPacket& pkt, AlignedBuffer<int16_t>& buf)
    {
       if (!has_audio)
          return;
@@ -349,14 +349,12 @@ namespace AV
       uint8_t *data = pkt.data;
       size_t size = pkt.size;
 
-      // AVCODEC_MAX_AUDIO_FRAME_SIZE would do, but FFmpeg needs some extra padding-stuff, so why not...
-      std::array<uint8_t, AVCODEC_MAX_AUDIO_FRAME_SIZE * 2> buf;
       size_t written = 0;
       while (pkt.size > 0)
       {
-         int out_size = buf.size() - written;
+         int out_size = buf.size() * sizeof(int16_t) - written;
          audio_lock.lock();
-         int ret = avcodec_decode_audio3(file->audio().ctx, reinterpret_cast<int16_t*>(&buf[written]), &out_size, &pkt);
+         int ret = avcodec_decode_audio3(file->audio().ctx, &buf[written / sizeof(int16_t)], &out_size, &pkt);
          audio_lock.unlock();
          if (ret <= 0)
             break;
@@ -369,7 +367,7 @@ namespace AV
       pkt.size = size;
 
       audio_lock.lock();
-      audio->write(reinterpret_cast<const int16_t*>(&buf[0]), written / 2);
+      audio->write(&buf[0], written / 2);
       audio_lock.unlock();
 
       avlock.lock();
@@ -582,6 +580,8 @@ namespace AV
          audio = Null<int16_t>::shared(file->audio().channels, file->audio().rate);
       }
 
+      AlignedBuffer<int16_t> audio_buffer(AVCODEC_MAX_AUDIO_FRAME_SIZE);
+
       while (audio_thread_active && aud_pkt_queue.alive())
       {
          if (is_paused)
@@ -598,7 +598,7 @@ namespace AV
          {
             auto pkt = aud_pkt_queue.pull();
             avlock.unlock();
-            process_audio(pkt.get());
+            process_audio(pkt.get(), audio_buffer);
          }
          else
          {

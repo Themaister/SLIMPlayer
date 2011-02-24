@@ -79,7 +79,7 @@ namespace AV
 
          void process_subtitle(AV::Video::Display::APtr&&);
          void process_video(AVPacket&, AV::Video::Display::APtr, AVFrame*);
-         void process_audio(AVPacket&);
+         void process_audio(AVPacket&, AlignedBuffer<int16_t>&);
          void pause_toggle();
 
          void video_thread_fn();
