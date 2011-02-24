@@ -70,6 +70,7 @@ namespace AV
 
             virtual const ListType& msg_list(double timestamp) = 0;
             virtual void flush() = 0;
+            virtual void set_dimensions(unsigned width, unsigned height) = 0;
       };
    }
 }

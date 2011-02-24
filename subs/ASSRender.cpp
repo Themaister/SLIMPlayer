@@ -107,6 +107,11 @@ void ASSRenderer::flush()
    ass_flush_events(track);
 }
 
+void ASSRenderer::set_dimensions(unsigned width, unsigned height)
+{
+   ass_set_frame_size(renderer, width, height);
+}
+
 // Grab decoded messages from ffmpeg here.
 void ASSRenderer::push_msg(const std::string &msg, double video_pts)
 {

@@ -49,6 +49,7 @@ namespace Video {
          void subtitle(const AV::Sub::Message& msg);
          void flip();
          void toggle_fullscreen();
+         void get_rect(unsigned& w, unsigned& h);
 
          ~GL();
       private:
@@ -56,6 +57,8 @@ namespace Video {
          unsigned height;
          unsigned fullscreen_x;
          unsigned fullscreen_y;
+         static unsigned current_x;
+         static unsigned current_y;
          bool fullscreen;
          bool do_fullscreen;
 

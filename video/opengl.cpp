@@ -87,6 +87,8 @@ namespace Internal
 }
 
 float GL::aspect_ratio = 0.0;
+unsigned GL::current_x = 0;
+unsigned GL::current_y = 0;
 
 GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_width), height(in_height), fullscreen(false), do_fullscreen(false)
 {
@@ -102,6 +104,9 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
 
    if (!SDL_SetVideoMode(in_width, in_height, 0, SDL_OPENGL | SDL_RESIZABLE))
       throw std::runtime_error("Failed to init GL Window.");
+
+   current_x = width;
+   current_y = height;
 
    aspect_ratio = in_aspect_ratio;
 
@@ -166,6 +171,12 @@ void GL::toggle_fullscreen()
    do_fullscreen = true;
 }
 
+void GL::get_rect(unsigned& in_width, unsigned& in_height)
+{
+   in_width = current_x;
+   in_height = current_y;
+}
+
 void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 {
    glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), Internal::vertexes);
@@ -213,10 +224,10 @@ void GL::subtitle(const Sub::Message& msg)
    glTexImage2D(GL_TEXTURE_2D,
          0, GL_INTENSITY8, msg.rect.w, msg.rect.h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &msg.data[0]);
 
-   float x_l = (float)msg.rect.x / width;
-   float x_h = (float)(msg.rect.x + msg.rect.w) / width;
-   float y_h = (float)(height - msg.rect.y) / height;
-   float y_l = (float)(height - msg.rect.y - msg.rect.h) / height;
+   float x_l = (float)msg.rect.x / current_x;
+   float x_h = (float)(msg.rect.x + msg.rect.w) / current_x;
+   float y_h = (float)(current_y - msg.rect.y) / current_y;
+   float y_l = (float)(current_y - msg.rect.y - msg.rect.h) / current_y;
 
    const GLfloat vertexes[] = {
       x_l, y_l, 0,
@@ -272,11 +283,15 @@ void GL::flip()
       {
          SDL_SetVideoMode(fullscreen_x, fullscreen_y, 0, SDL_OPENGL | SDL_RESIZABLE);
          set_viewport(fullscreen_x, fullscreen_y);
+         current_x = fullscreen_x;
+         current_y = fullscreen_y;
       }
       else
       {
          SDL_SetVideoMode(width, height, 0, SDL_OPENGL | SDL_RESIZABLE);
          set_viewport(width, height);
+         current_x = width;
+         current_y = height;
       }
    }
    do_fullscreen = false;
@@ -387,6 +402,8 @@ void GLEvent::poll()
             case SDL_VIDEORESIZE:
                SDL_SetVideoMode(event.resize.w, event.resize.h, 0, SDL_OPENGL | SDL_RESIZABLE);
                GL::set_viewport(event.resize.w, event.resize.h);
+               GL::current_x = event.resize.w;
+               GL::current_y = event.resize.h;
                break;
 
             default:

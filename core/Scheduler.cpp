@@ -397,6 +397,10 @@ namespace AV
 
    void Scheduler::process_subtitle(Display::APtr&& vid)
    {
+      unsigned disp_x, disp_y;
+      vid->get_rect(disp_x, disp_y);
+      sub_renderer->set_dimensions(disp_x, disp_y);
+
       for (;;)
       {
          avlock.lock();

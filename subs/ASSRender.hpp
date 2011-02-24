@@ -46,6 +46,7 @@ namespace AV
             void push_msg(const std::string &msg, double video_pts);
             const ListType& msg_list(double timestamp);
             void flush();
+            void set_dimensions(unsigned height, unsigned width);
 
          private:
             ASS_Library *library;

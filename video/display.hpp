@@ -39,6 +39,7 @@ namespace AV
             virtual void subtitle(const Sub::Message& sub) = 0;
             virtual void flip() = 0;
             virtual void toggle_fullscreen() = 0;
+            virtual void get_rect(unsigned& width, unsigned& height) = 0;
 
             virtual ~Display() {}
       };
