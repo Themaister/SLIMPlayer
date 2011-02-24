@@ -54,7 +54,7 @@ namespace AV
    class AlignedBuffer
    {
       public:
-         AlignedBuffer(size_t in_size) : m_buf((T*)av_mallocz(in_size * sizeof(T))), m_size(in_size) {}
+         AlignedBuffer(size_t in_size = 0) : m_buf((T*)av_mallocz(in_size * sizeof(T))), m_size(in_size) {}
 
          AlignedBuffer(const AlignedBuffer& in_buf) { *this = in_buf; }
          AlignedBuffer(AlignedBuffer&& in_buf) { *this = std::move(in_buf); }
