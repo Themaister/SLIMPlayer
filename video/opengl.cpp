@@ -220,7 +220,7 @@ void GL::subtitle(const Sub::Message& msg)
    glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(msg.rect.stride));
    glPixelStorei(GL_UNPACK_ROW_LENGTH, msg.rect.stride); 
 
-   glColor4f(msg.color.r, msg.color.g, msg.color.b, 1.0);
+   glColor4f(msg.color.r, msg.color.g, msg.color.b, msg.color.a);
    glTexImage2D(GL_TEXTURE_2D,
          0, GL_INTENSITY8, msg.rect.w, msg.rect.h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, &msg.data[0]);
 

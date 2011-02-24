@@ -39,9 +39,9 @@ namespace AV
 
       struct Color
       {
-         Color(float _r, float _g, float _b) 
-            : r(_r), g(_g), b(_b) {}
-         float r, g, b;
+         Color(float _r, float _g, float _b, float _a = 1.0) 
+            : r(_r), g(_g), b(_b), a(_a) {}
+         float r, g, b, a;
       };
 
       // A message to the screen. Float values are relative [0.0, 1.0]. Picture format is YV12.

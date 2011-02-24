@@ -55,9 +55,10 @@ namespace AV
 
 Message ASSRenderer::create_message(ASS_Image *img)
 {
-   float r = (img->color >> 24 & 0xFF) / 256.0;
-   float g = (img->color >> 16 & 0xFF) / 256.0; 
-   float b = (img->color >> 8  & 0xFF) / 256.0;
+   float r = ((img->color >> 24) & 0xFF) / 256.0;
+   float g = ((img->color >> 16) & 0xFF) / 256.0; 
+   float b = ((img->color >> 8)  & 0xFF) / 256.0;
+   //float a = ((img->color >> 0)  & 0xFF) / 256.0;  
 
    return 
       Message
