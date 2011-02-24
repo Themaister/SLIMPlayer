@@ -27,6 +27,7 @@
 #include <iostream>
 #include <thread>
 
+
 using namespace AV::Video;
 using namespace AV;
 
@@ -153,6 +154,7 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
 
    CHECK_GL_ERROR();
 }
+
 
 unsigned GL::get_alignment(unsigned pitch)
 {
@@ -281,7 +283,7 @@ void GL::flip()
    {
       if (fullscreen)
       {
-         SDL_SetVideoMode(fullscreen_x, fullscreen_y, 0, SDL_OPENGL | SDL_RESIZABLE);
+         SDL_SetVideoMode(fullscreen_x, fullscreen_y, 0, SDL_OPENGL | SDL_RESIZABLE | SDL_FULLSCREEN);
          set_viewport(fullscreen_x, fullscreen_y);
          current_x = fullscreen_x;
          current_y = fullscreen_y;
@@ -371,7 +373,7 @@ namespace Internal
    };
 }
 
-GLEvent::GLEvent() : thread_id(std::this_thread::get_id()), current_event(EventHandler::Event::None)
+GLEvent::GLEvent() : thread_id(std::this_thread::get_id()), cur_evnt(EventHandler::Event::None)
 {
 }
 
@@ -385,7 +387,7 @@ void GLEvent::poll()
          switch (event.type)
          {
             case SDL_QUIT:
-               current_event = EventHandler::Event::Quit;
+               cur_evnt = EventHandler::Event::Quit;
                break;
 
             case SDL_KEYDOWN:
@@ -393,7 +395,7 @@ void GLEvent::poll()
                {
                   if (itr->first == event.key.keysym.sym)
                   {
-                     current_event = itr->second;
+                     cur_evnt = itr->second;
                      break;
                   }
                }
@@ -415,8 +417,9 @@ void GLEvent::poll()
 
 EventHandler::Event GLEvent::event()
 {
-   auto ret = current_event;
-   current_event = EventHandler::Event::None;
+   auto ret = cur_evnt;
+   cur_evnt = EventHandler::Event::None;
    return ret;
 }
+
 

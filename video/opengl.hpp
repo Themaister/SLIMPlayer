@@ -90,7 +90,7 @@ namespace Video {
          void poll();
       private:
          std::thread::id thread_id;
-         EventHandler::Event current_event;
+         EventHandler::Event cur_evnt;
    };
 
 }}
