@@ -82,11 +82,16 @@ namespace General
       }
    };
 
-   // Apply this macro in public: section of your class.
-#define DECL_SMART(type) using ::General::SmartDefs< type >::Ptr; \
-   using ::General::SmartDefs< type >::UPtr; \
-   using ::General::SmartDefs< type >::shared; \
+   // Apply one of these macros in public: section of your class.
+   //
+#define DECL_SHARED(type) using ::General::SmartDefs< type >::Ptr; \
+   using ::General::SmartDefs< type >::shared
+
+#define DECL_UNIQUE(type) using ::General::SmartDefs< type >::UPtr; \
    using ::General::SmartDefs< type >::unique
+
+#define DECL_SMART(type) DECL_SHARED(type); \
+   DECL_UNIQUE(type)
 
 
    template<class T>
