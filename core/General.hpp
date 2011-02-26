@@ -62,44 +62,32 @@ namespace General
       };
    }
 
-   // Inherit one of these classes to use a generic smart pointer interface.
-
-   // If class is abstract, use this interface.
+   // Inherit this privately to use a generic smart pointer interface.
    template <class T>
-   struct SharedAbstract
-   {
-      typedef typename Internal::DeclareShared<T>::type APtr;
-   };
-
-   template <class T>
-   struct Shared
+   struct SmartDefs
    {
       typedef typename Internal::DeclareShared<T>::type Ptr;
-
-      template <class... P>
-      static Ptr shared(P&&... args) 
-      { 
-         return std::make_shared<T>(std::forward<P>(args)...); 
-      }
-   };
-
-   template <class T>
-   struct UniqueAbstract
-   {
-      typedef typename Internal::DeclareUnique<T>::type AUPtr;
-   };
-
-   template <class T>
-   struct Unique
-   {
       typedef typename Internal::DeclareUnique<T>::type UPtr;
 
       template <class... P>
-      static UPtr shared(P&&... args) 
-      { 
-         return std::unique_ptr<T>(new T(std::forward<P>(args)...)); 
+      static Ptr shared(P&&... p)
+      {
+         return std::make_shared<T>(std::forward<P>(p)...);
+      }
+
+      template <class... P>
+      static UPtr unique(P&&... p)
+      {
+         return std::unique_ptr<T>(new T(std::forward<P>(p)...));
       }
    };
+
+   // Apply this macro in public: section of your class.
+#define DECL_SMART(type) using ::General::SmartDefs< type >::Ptr; \
+   using ::General::SmartDefs< type >::UPtr; \
+   using ::General::SmartDefs< type >::shared; \
+   using ::General::SmartDefs< type >::unique
+
 
    template<class T>
    class RefCounted

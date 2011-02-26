@@ -28,15 +28,28 @@
 #include <stdlib.h>
 #include "General.hpp"
 #include <atomic>
+#include <stdexcept>
+#include <string>
 
 namespace AV 
 {
    namespace Audio 
    {
-      template<class T>
-      class Stream : public General::SharedAbstract<Stream<T>>
+      class DeviceException : public std::exception
       {
          public:
+            DeviceException(const std::string& _msg) : msg(_msg) {}
+            const char *what() const throw() { return msg.c_str(); }
+            ~DeviceException() throw() {}
+         private:
+            std::string msg;
+      };
+
+      template<class T>
+      class Stream : private General::SmartDefs<Stream<T>>
+      {
+         public:
+            DECL_SMART(Stream<T>);
             Stream() : m_callback(nullptr), m_saved_callback(NULL) {}
 
             // Returns number of samples you can write without blocking.

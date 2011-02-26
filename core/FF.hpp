@@ -106,9 +106,10 @@ namespace FF
          ~FFMPEG();
    };
 
-   class MediaFile : public FFMPEG, public General::Shared<MediaFile>
+   class MediaFile : public FFMPEG, private General::SmartDefs<MediaFile>
    {
       public:
+         DECL_SMART(MediaFile);
          MediaFile(const char *path);
          MediaFile(MediaFile&&);
          MediaFile& operator=(MediaFile&&);

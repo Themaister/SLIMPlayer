@@ -29,10 +29,10 @@ namespace AV
 {
    namespace Video 
    {
-
-      class Display : public General::SharedAbstract<Display>
+      class Display : public General::SmartDefs<Display>
       {
          public:
+            DECL_SMART(Display);
             Display() {}
 
             virtual void frame(const uint8_t * const * data, const int *pitch, int w, int h) = 0;
@@ -43,7 +43,6 @@ namespace AV
 
             virtual ~Display() {}
       };
-
    }
 }
 

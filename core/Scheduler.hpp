@@ -25,17 +25,18 @@
 
 namespace AV
 {
-   class Scheduler : public General::Shared<Scheduler>
+   class Scheduler : private General::SmartDefs<Scheduler>
    {
       public:
+         DECL_SMART(Scheduler);
          Scheduler(FF::MediaFile::Ptr in_file);
          void operator=(const Scheduler&) = delete;
          Scheduler(const Scheduler&) = delete;
 
          ~Scheduler();
 
-         void add_event_handler(EventHandler::APtr ptr);
-         void add_info_handler(IO::InfoOutput::APtr ptr);
+         void add_event_handler(EventHandler::Ptr ptr);
+         void add_info_handler(IO::InfoOutput::Ptr ptr);
 
          bool active() const;
          void run();
@@ -59,8 +60,8 @@ namespace AV
          // If we never get proper PTS values for audio, we have to "hack" while seeking.
          bool audio_pts_hack;
 
-         std::list<EventHandler::APtr> event_handlers;
-         std::list<IO::InfoOutput::APtr> info_handlers;
+         std::list<EventHandler::Ptr> event_handlers;
+         std::list<IO::InfoOutput::Ptr> info_handlers;
          EventHandler::Event next_event();
 
          volatile bool video_thread_active;
@@ -68,17 +69,17 @@ namespace AV
          PacketQueue vid_pkt_queue;
          PacketQueue aud_pkt_queue;
          PacketQueue sub_pkt_queue;
-         AV::Sub::Renderer::APtr sub_renderer;
+         AV::Sub::Renderer::Ptr sub_renderer;
 
          std::thread video_thread;
          std::thread audio_thread;
-         Video::Display::APtr video;
-         Audio::Stream<int16_t>::APtr audio;
+         Video::Display::Ptr video;
+         Audio::Stream<int16_t>::Ptr audio;
 
          void perform_seek(double delta);
 
-         void process_subtitle(AV::Video::Display::APtr&&);
-         void process_video(AVPacket&, AV::Video::Display::APtr, AVFrame*);
+         void process_subtitle(AV::Video::Display::Ptr);
+         void process_video(AVPacket&, AV::Video::Display::Ptr, AVFrame*);
          void process_audio(AVPacket&, AlignedBuffer<int16_t>&);
          void pause_toggle();
 

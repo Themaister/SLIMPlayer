@@ -6,9 +6,10 @@
 
 namespace IO
 {
-   class TermEvent : public AV::EventHandler, public General::Shared<TermEvent>
+   class TermEvent : public AV::EventHandler, private General::SmartDefs<TermEvent>
    {
       public:
+         DECL_SMART(TermEvent);
          TermEvent();
          void poll();
          EventHandler::Event event();

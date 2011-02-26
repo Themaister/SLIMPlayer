@@ -37,9 +37,10 @@ namespace AV
 {
    namespace Sub 
    {
-      class ASSRenderer : public Renderer, public General::Shared<ASSRenderer>
+      class ASSRenderer : public Renderer, private General::SmartDefs<ASSRenderer>
       {
          public:
+            DECL_SMART(ASSRenderer);
             ASSRenderer(const std::vector<std::pair<std::string, std::vector<char>>>& fonts, const std::vector<char>& ass_data, unsigned width, unsigned height);
             ~ASSRenderer();
 

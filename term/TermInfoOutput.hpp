@@ -5,9 +5,10 @@
 
 namespace IO
 {
-   class TermInfoOutput : public InfoOutput, public General::Shared<TermInfoOutput>
+   class TermInfoOutput : public InfoOutput, private General::SmartDefs<TermInfoOutput>
    {
       public:
+         DECL_SMART(TermInfoOutput);
          void output(double video_pts, double audio_pts, bool show_video, bool show_audio);
          ~TermInfoOutput();
    };

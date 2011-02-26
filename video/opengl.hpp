@@ -37,9 +37,10 @@ namespace Video {
 
    class GLEvent;
 
-   class GL : public Display, public General::Shared<GL>
+   class GL : public Display, private General::SmartDefs<GL>
    {
       public:
+         DECL_SMART(GL);
          GL(unsigned in_width, unsigned in_height, float in_aspect_ratio);
 
          GL(const GL&) = delete;
@@ -82,9 +83,10 @@ namespace Video {
          friend class GLEvent;
    };
 
-   class GLEvent : public AV::EventHandler, public General::Shared<GLEvent>
+   class GLEvent : public AV::EventHandler, private General::SmartDefs<GLEvent>
    {
       public:
+         DECL_SMART(GLEvent);
          GLEvent();
          Event event();
          void poll();

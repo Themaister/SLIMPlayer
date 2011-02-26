@@ -31,9 +31,10 @@ namespace AV
    {
 
       template <class T>
-      class RSound : public Stream<T>, public General::Shared<RSound<T>>
+      class RSound : public Stream<T>, private General::SmartDefs<RSound<T>>
       {
          public:
+            DECL_SMART(RSound<T>);
             RSound(const std::string& server, int channels, int samplerate, int buffersize = 8092, int latency = 0) : thread_active(false), m_chan(channels)
             {
                rsd_init(&rd);
@@ -59,6 +60,9 @@ namespace AV
 
                emptybuf = new uint8_t[buffersize];
                memset(emptybuf, 0, buffersize);
+
+               if (!runnable)
+                  throw DeviceException("Failed to connect to server");
             }
 
             ~RSound()

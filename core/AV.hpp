@@ -88,9 +88,10 @@ namespace AV
          size_t m_size;
    };
 
-   class EventHandler : public General::SharedAbstract<EventHandler>
+   class EventHandler : private General::SmartDefs<EventHandler>
    {
       public:
+         DECL_SMART(EventHandler);
          enum class Event : unsigned
          {
             Pause,

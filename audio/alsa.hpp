@@ -31,17 +31,17 @@ namespace AV
    {
 
       template <class T>
-      class ALSA : public Stream<T>, public General::Shared<ALSA<T>>
+      class ALSA : public Stream<T>, private General::SmartDefs<ALSA<T>>
       {
          public:
+            DECL_SMART(ALSA<T>);
             ALSA(unsigned channels, unsigned samplerate, const std::string& device = "default") : runnable(true), pcm(nullptr), params(nullptr), fps(samplerate)
             {
                int rc = snd_pcm_open(&pcm, device.c_str(), SND_PCM_STREAM_PLAYBACK, 0);
                if (rc < 0)
                {
-                  std::cerr << "Unable to open PCM device: " << snd_strerror(rc) << std::endl;
                   runnable = false;
-                  return;
+                  throw DeviceException(General::join("Unable to open PCM device ", snd_strerror(rc)));
                }
 
                snd_pcm_format_t fmt = type_to_format(T());
@@ -49,25 +49,19 @@ namespace AV
                if (snd_pcm_hw_params_malloc(&params) < 0)
                {
                   runnable = false;
-                  return;
+                  throw DeviceException("Failed to allocate memory.");
                }
 
                runnable = false;
-               if (snd_pcm_hw_params_any(pcm, params) < 0)
-                  return;
-               if (snd_pcm_hw_params_set_access(pcm, params, SND_PCM_ACCESS_RW_INTERLEAVED) < 0)
-                  return;
-               if (snd_pcm_hw_params_set_channels(pcm, params, channels) < 0)
-                  return;
-               if (snd_pcm_hw_params_set_format(pcm, params, fmt) < 0)
-                  return;
-               if (snd_pcm_hw_params_set_rate(pcm, params, samplerate, 0) < 0)
-                  return;
-               if ((rc = snd_pcm_hw_params(pcm, params)) < 0)
-               {
-                  std::cerr << "Unable to install HW params: " << snd_strerror(rc) << std::endl;
-                  return;
-               }
+               if (
+                     (snd_pcm_hw_params_any(pcm, params) < 0) ||
+                     (snd_pcm_hw_params_set_access(pcm, params, SND_PCM_ACCESS_RW_INTERLEAVED) < 0) ||
+                     (snd_pcm_hw_params_set_channels(pcm, params, channels) < 0) ||
+                     (snd_pcm_hw_params_set_format(pcm, params, fmt) < 0) ||
+                     (snd_pcm_hw_params_set_rate(pcm, params, samplerate, 0) < 0) ||
+                     ((rc = snd_pcm_hw_params(pcm, params)) < 0)
+                  )
+                  throw DeviceException(General::join("Unable to install HW params: ", snd_strerror(rc)));
 
                runnable = true;
             }

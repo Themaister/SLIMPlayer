@@ -33,9 +33,10 @@ namespace AV
    {
       // This should do better at A/V sync, but hey. :)
       template <class T>
-      class Null : public Stream<T>, public General::Shared<Null<T>>
+      class Null : public Stream<T>, public General::SmartDefs<Null<T>>
       {
          public:
+            DECL_SMART(Null<T>);
             Null(unsigned in_chan, unsigned in_rate) : rate(in_rate), chan(in_chan) {}
 
             size_t write(const T*, size_t samples)

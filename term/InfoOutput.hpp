@@ -5,9 +5,10 @@
 
 namespace IO
 {
-   class InfoOutput : public General::SharedAbstract<InfoOutput>
+   class InfoOutput : private General::SmartDefs<InfoOutput>
    {
       public:
+         DECL_SMART(InfoOutput);
          virtual ~InfoOutput() {}
          virtual void output(double video_pts, double audio_pts, bool show_video, bool show_audio) = 0;
    };

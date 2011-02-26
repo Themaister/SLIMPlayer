@@ -45,8 +45,9 @@ namespace AV
       };
 
       // A message to the screen. Float values are relative [0.0, 1.0]. Picture format is YV12.
-      struct Message : public General::Shared<Message>
+      struct Message : private General::SmartDefs<Message>
       {
+         DECL_SMART(Message);
          Message(const Rect& in_rect, const Color& in_color, const uint8_t *in_data) :
             rect(in_rect), color(in_color)
          {
@@ -60,9 +61,10 @@ namespace AV
          std::vector<uint8_t> data;
       };
 
-      class Renderer : public General::SharedAbstract<Renderer>
+      class Renderer : private General::SmartDefs<Renderer>
       {
          public:
+            DECL_SMART(Renderer);
             virtual ~Renderer() {};
 
             virtual void push_msg(const std::string& msg, double video_pts) = 0;

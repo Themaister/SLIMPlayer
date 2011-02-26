@@ -81,7 +81,7 @@ namespace AV
       auto event = EventHandler::Event::None;
 
       std::for_each(event_handlers.begin(), event_handlers.end(), 
-            [&event](EventHandler::APtr& handler) 
+            [&event](EventHandler::Ptr& handler) 
             {
                handler->poll();
                auto evnt = handler->event();
@@ -157,7 +157,7 @@ namespace AV
    void Scheduler::show_info()
    {
       std::for_each(info_handlers.begin(), info_handlers.end(),
-            [this](IO::InfoOutput::APtr& ptr)
+            [this](IO::InfoOutput::Ptr& ptr)
             {
                double time = get_time();
                if (is_paused)
@@ -296,7 +296,7 @@ namespace AV
       return frame_time;
    }
 
-   void Scheduler::process_video(AVPacket& pkt, Display::APtr vid, AVFrame *frame)
+   void Scheduler::process_video(AVPacket& pkt, Display::Ptr vid, AVFrame *frame)
    {
       if (!has_video)
          return;
@@ -393,7 +393,7 @@ namespace AV
       avlock.unlock();
    }
 
-   void Scheduler::process_subtitle(Display::APtr&& vid)
+   void Scheduler::process_subtitle(Display::Ptr vid)
    {
       unsigned disp_x, disp_y;
       vid->get_rect(disp_x, disp_y);
@@ -470,13 +470,13 @@ namespace AV
       gfx_lock.unlock();
    }
 
-   void Scheduler::add_event_handler(EventHandler::APtr handler)
+   void Scheduler::add_event_handler(EventHandler::Ptr handler)
    {
       std::lock_guard<std::mutex> f(avlock);
       event_handlers.push_back(handler);
    }
 
-   void Scheduler::add_info_handler(IO::InfoOutput::APtr handler)
+   void Scheduler::add_info_handler(IO::InfoOutput::Ptr handler)
    {
       std::lock_guard<std::mutex> f(avlock);
       info_handlers.push_back(handler);
@@ -573,10 +573,13 @@ namespace AV
    // Audio thread
    void Scheduler::audio_thread_fn()
    {
-      audio = ALSA<int16_t>::shared(file->audio().channels, file->audio().rate);
-      if (!audio->alive())
+      try
       {
-         std::cerr << "Failed to open audio driver, using Null driver!" << std::endl;
+         audio = ALSA<int16_t>::shared(file->audio().channels, file->audio().rate);
+      } 
+      catch (std::exception& e) 
+      {
+         std::cerr << e.what() << std::endl;
          audio = Null<int16_t>::shared(file->audio().channels, file->audio().rate);
       }
 
