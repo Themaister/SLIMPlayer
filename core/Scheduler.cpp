@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 // Seem to be some libstdc++ issue for now.
 #define _GLIBCXX_USE_NANOSLEEP
 
@@ -34,7 +33,6 @@
 #include <chrono>
 #include <algorithm>
 
-
 using namespace FF;
 using namespace AV::Audio;
 using namespace AV::Video;
@@ -42,7 +40,7 @@ using namespace AV::Sub;
 
 namespace AV
 {
-   Scheduler::Scheduler(MediaFile::Ptr in_file) : file(in_file), is_active(true), video_pts(0.0), audio_pts(0.0), audio_pts_ts(get_time()), video_pts_ts(get_time()), audio_written(0), is_paused(false), audio_pts_hack(false), video_thread_active(false), audio_thread_active(false)
+   Scheduler::Scheduler(MediaFile::Ptr in_file) : file(in_file), is_active(true), video_pts(0.0), audio_pts(0.0), audio_pts_ts(get_time()), video_pts_ts(get_time()), audio_written(0), is_paused(false), video_thread_active(false), audio_thread_active(false)
    {
       has_video = file->video().active;
       has_audio = file->audio().active;
@@ -80,15 +78,15 @@ namespace AV
    {
       auto event = EventHandler::Event::None;
 
-      std::for_each(event_handlers.begin(), event_handlers.end(), 
-            [&event](EventHandler::Ptr& handler) 
-            {
-               handler->poll();
-               auto evnt = handler->event();
+      for (auto& handler : event_handlers)
+      {
+         handler->poll();
+         auto evnt = handler->event();
 
-               if (event == EventHandler::Event::None)
-                  event = evnt;
-            });
+         if (event == EventHandler::Event::None)
+            event = evnt;
+      }
+
       return event;
    }
 
@@ -119,27 +117,8 @@ namespace AV
 
       video_pts += time;
 
-      // We have to seek and be able to calculate what the new audio PTS will be :( :( 
-      // Very dirty, but can't find a better way for now.
-      if (audio_pts_hack)
-      {
-         if (file->video().active)
-            std::cerr << "Audio PTS hack activated! Video might blow up or seek really slow." << std::endl;
-
-         // We will seek to this absolute time.
-         audio_written = ((has_video ? video_pts : audio_pts) + time) * (file->audio().rate * file->audio().channels * 2);
-         audio_lock.lock();
-         gfx_lock.lock();
-         file->seek(video_pts, has_video ? video_pts : audio_pts, time, FF::SeekTarget::Audio);
-         gfx_lock.unlock();
-         audio_lock.unlock();
-
-      }
-      else
-      {
-         audio_written += file->audio().rate * file->audio().channels * time * 2;
-         file->seek(video_pts, audio_pts, time);
-      }
+      audio_written += file->audio().rate * file->audio().channels * time * 2;
+      file->seek(video_pts, audio_pts, time);
 
       if (has_audio)
       {
@@ -156,15 +135,14 @@ namespace AV
 
    void Scheduler::show_info()
    {
-      std::for_each(info_handlers.begin(), info_handlers.end(),
-            [this](IO::InfoOutput::Ptr& ptr)
-            {
-               double time = get_time();
-               if (is_paused)
-                  ptr->output(video_pts, audio_pts, file->video().active, file->audio().active);
-               else
-                  ptr->output(video_pts + (time - video_pts_ts), audio_pts + (time - audio_pts_ts), file->video().active, file->audio().active);
-            });
+      for (auto& ptr : info_handlers)
+      {
+         double time = get_time();
+         if (is_paused)
+            ptr->output(video_pts, audio_pts, file->video().active, file->audio().active);
+         else
+            ptr->output(video_pts + (time - video_pts_ts), audio_pts + (time - audio_pts_ts), file->video().active, file->audio().active);
+      };
    }
 
    void Scheduler::run()
@@ -184,35 +162,29 @@ namespace AV
       switch (event)
       {
          case EventHandler::Event::Quit:
-            //std::cerr << "Quitting!!!" << std::endl;
             is_active = false;
             video_thread_active = false;
             audio_thread_active = false;
             return;
 
          case EventHandler::Event::Pause:
-            //std::cerr << "Pause toggling stream!!!" << std::endl;
             pause_toggle();
             break;
 
          case EventHandler::Event::SeekBack10:
-            //std::cerr << "Seeking backwards!!!" << std::endl;
-            perform_seek(-10.0);
+            perform_seek(-3.0);
             break;
 
          case EventHandler::Event::SeekForward10:
-            //std::cerr << "Seeking forward!!!" << std::endl;
-            perform_seek(10.0);
+            perform_seek(3.0);
             break;
 
          case EventHandler::Event::SeekBack60:
-            //std::cerr << "Seeking backwards!!!" << std::endl;
-            perform_seek(-60.0);
+            perform_seek(-30.0);
             break;
 
          case EventHandler::Event::SeekForward60:
-            //std::cerr << "Seeking forward!!!" << std::endl;
-            perform_seek(60.0);
+            perform_seek(30.0);
             break;
 
          case EventHandler::Event::Fullscreen:
@@ -311,13 +283,9 @@ namespace AV
       gfx_lock.unlock();
 
       if (pkt.dts == (int64_t)AV_NOPTS_VALUE && frame->opaque && *(uint64_t*)frame->opaque != AV_NOPTS_VALUE)
-      {
          pts = *(uint64_t*)frame->opaque;
-      }
       else if (pkt.dts != (int64_t)AV_NOPTS_VALUE)
-      {
          pts = pkt.dts;
-      }
 
       if (finished)
       {
@@ -329,9 +297,7 @@ namespace AV
          video_pts += frame->repeat_pict / (2.0 * frame_time());
 
          if (file->video().ctx->pix_fmt == PIX_FMT_YUV420P)
-         {
             vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
-         }
          else // Should fix this up.
          {
             std::swap(frame->data[1], frame->data[2]);
@@ -374,20 +340,9 @@ namespace AV
       audio_written += written;
 
       if (pkt.pts != (int64_t)AV_NOPTS_VALUE)
-      {
          audio_pts = pkt.pts * av_q2d(file->audio().time_base) - audio->delay();
-      }
       else if (pkt.dts != (int64_t)AV_NOPTS_VALUE)
-      {
          audio_pts = pkt.dts * av_q2d(file->audio().time_base) - audio->delay();
-      }
-      else
-      {
-         audio_pts = (double)audio_written/(file->audio().rate * file->audio().channels * 2) - audio->delay();
-         //std::cerr << "Couldn't get audio pts nor dts. Guessing!" << std::endl;
-         audio_pts_hack = true;
-      }
-      //std::cout << "Audio PTS: " << audio_pts << std::endl;
 
       audio_pts_ts = get_time();
       avlock.unlock();
@@ -462,11 +417,10 @@ namespace AV
       // Print all subtitle currently active in this PTS to screen.
       gfx_lock.lock();
       auto& list = sub_renderer->msg_list(video_pts);
-      std::for_each(list.begin(), list.end(), 
-            [&vid](const Message& msg)
-            {
-               vid->subtitle(msg);
-            });
+
+      for (auto& msg : list)
+         vid->subtitle(msg);
+
       gfx_lock.unlock();
    }
 

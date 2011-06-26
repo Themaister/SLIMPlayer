@@ -76,12 +76,11 @@ ASSRenderer::ASSRenderer(const std::vector<std::pair<std::string, std::vector<ch
 
    // Here enters the prettycast! :D
    // Why does ASS use char* and not const char* ?!
-   std::for_each(fonts.begin(), fonts.end(), 
-         [this](const std::pair<std::string, std::vector<char>>& font)
-         {
-            ass_add_font(library, const_cast<char*>(font.first.c_str()), 
-               const_cast<char*>(&font.second[0]), font.second.size());
-         });
+   for (auto& font : fonts)
+   {
+      ass_add_font(library, const_cast<char*>(font.first.c_str()), 
+            const_cast<char*>(&font.second[0]), font.second.size());
+   }
 
    renderer = ass_renderer_init(library);
    // Hardcode for now.

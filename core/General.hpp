@@ -26,24 +26,6 @@
 #include <string>
 #include <sstream>
 
-#ifdef GPP_VERSION
-#undef GPP_VERSION
-#endif
-#define GPP_VERSION (__GNUG__ * 10000 \
-      + __GNUG_MINOR__ * 100 \
-      + __GNUG_PATCHLEVEL__)
-
-// nullptr is not supported in GCC < 4.6, so we macro it :3
-#if GPP_VERSION < 40600
-#include <stddef.h>
-
-#ifdef nullptr
-#undef nullptr
-#endif
-
-#define nullptr NULL
-#endif
-
 namespace General
 {
    // Template magic incoming!

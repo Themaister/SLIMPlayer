@@ -91,7 +91,7 @@ namespace FF
             Error = 0x1,
             Audio = 0x2,
             Video = 0x4,
-            Subtitle = 0x8,
+            Subtitle = 0x8
          };
 
       private:

@@ -101,7 +101,7 @@ namespace AV
             SeekBack60,
             SeekForward60,
             Fullscreen,
-            None,
+            None
          };
 
          virtual Event event() = 0;

@@ -256,13 +256,13 @@ void GL::set_viewport(unsigned width, unsigned height)
 
    // If the aspect ratios of screen and desired aspect ratio are sufficiently equal (floating point stuff), 
    // assume they are actually equal.
-   if ( (int)(device_aspect*1000) > (int)(desired_aspect*1000) )
+   if ((int)(device_aspect*1000) > (int)(desired_aspect*1000))
    {
       delta = (desired_aspect / device_aspect - 1.0) / 2.0 + 0.5;
       glViewport(width * (0.5 - delta), 0, 2.0 * width * delta, height);
    }
 
-   else if ( (int)(device_aspect*1000) < (int)(desired_aspect*1000) )
+   else if ((int)(device_aspect*1000) < (int)(desired_aspect*1000))
    {
       delta = (device_aspect / desired_aspect - 1.0) / 2.0 + 0.5;
       glViewport(0, height * (0.5 - delta), width, 2.0 * height * delta);
@@ -320,7 +320,6 @@ void GL::print_shader_log(GLuint obj)
 
    if (info_len > 0)
       std::cerr << "Shader log: " << &info_log[0] << std::endl;
-
 }
 
 void GL::print_linker_log(GLuint obj)
@@ -374,8 +373,7 @@ namespace Internal
 }
 
 GLEvent::GLEvent() : thread_id(std::this_thread::get_id()), cur_evnt(EventHandler::Event::None)
-{
-}
+{}
 
 void GLEvent::poll()
 {
@@ -391,11 +389,11 @@ void GLEvent::poll()
                break;
 
             case SDL_KEYDOWN:
-               for (auto itr = Internal::cmd.begin(); itr != Internal::cmd.end(); ++itr)
+               for (auto itr : Internal::cmd)
                {
-                  if (itr->first == event.key.keysym.sym)
+                  if (itr.first == event.key.keysym.sym)
                   {
-                     cur_evnt = itr->second;
+                     cur_evnt = itr.second;
                      break;
                   }
                }

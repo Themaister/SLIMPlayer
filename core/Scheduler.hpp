@@ -57,9 +57,6 @@ namespace AV
          std::mutex audio_lock;
          std::mutex gfx_lock;
 
-         // If we never get proper PTS values for audio, we have to "hack" while seeking.
-         bool audio_pts_hack;
-
          std::list<EventHandler::Ptr> event_handlers;
          std::list<IO::InfoOutput::Ptr> info_handlers;
          EventHandler::Event next_event();

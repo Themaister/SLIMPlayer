@@ -126,7 +126,7 @@ namespace FF
       set_media_info();
 
       // Debug
-      dump_format(fctx, 0, path, false);
+      //dump_format(fctx, 0, path, false);
    }
 
    MediaFile::~MediaFile()
@@ -146,7 +146,7 @@ namespace FF
       // Find first video stream.
       for (unsigned i = 0; i < fctx->nb_streams; i++)
       {
-         if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO)
+         if (fctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
          {
             vid_stream = i;
             break;
@@ -155,7 +155,7 @@ namespace FF
       // Find first audio stream.
       for (unsigned i = 0; i < fctx->nb_streams; i++)
       {
-         if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_AUDIO)
+         if (fctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
          {
             aud_stream = i;
             break;
@@ -164,7 +164,7 @@ namespace FF
       // Find first subtitle stream.
       for (unsigned i = 0; i < fctx->nb_streams; i++)
       {
-         if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_SUBTITLE)
+         if (fctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_SUBTITLE)
          {
             sub_stream = i;
             break;
@@ -173,7 +173,7 @@ namespace FF
       // Map out all attachments, typically fonts for ASS. :)
       for (unsigned i = 0; i < fctx->nb_streams; i++)
       {
-         if (fctx->streams[i]->codec->codec_type == CODEC_TYPE_ATTACHMENT)
+         if (fctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_ATTACHMENT)
          {
             attachments.push_back(i);
          }
@@ -220,15 +220,12 @@ namespace FF
       }
 
       // Extract TTF fonts for use in ASS.
-      std::for_each(attachments.begin(), attachments.end(), 
-            [this](int id)
-            {
-               AVCodecContext *ctx = fctx->streams[id]->codec;
-               if (ctx->codec_id == CODEC_ID_TTF)
-               {
-                  sub_info.fonts.push_back(std::make_pair("", std::vector<char>(ctx->extradata, ctx->extradata + ctx->extradata_size)));
-               }
-            });
+      for (auto id : attachments)
+      {
+         AVCodecContext *ctx = fctx->streams[id]->codec;
+         if (ctx->codec_id == CODEC_ID_TTF)
+            sub_info.fonts.push_back(std::make_pair("", std::vector<char>(ctx->extradata, ctx->extradata + ctx->extradata_size)));
+      }
    }
 
    void MediaFile::set_media_info()
