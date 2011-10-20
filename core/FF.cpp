@@ -62,10 +62,7 @@ namespace FF
       ref()++;
 
       if (ref() == 1)
-      {
-         avcodec_init();
          av_register_all();
-      }
    }
 
    FFMPEG::~FFMPEG()
@@ -116,10 +113,10 @@ namespace FF
       if (path == nullptr)
          throw std::runtime_error("Got null-path\n");
 
-      if (av_open_input_file(&fctx, path, nullptr, 0, NULL) != 0)
+      if (avformat_open_input(&fctx, path, nullptr, nullptr) != 0)
          throw std::runtime_error("Failed to open file\n");
 
-      if (av_find_stream_info(fctx) < 0)
+      if (avformat_find_stream_info(fctx, nullptr) < 0)
          throw std::runtime_error("Failed to get stream information\n");
 
       resolve_codecs();
@@ -185,7 +182,7 @@ namespace FF
          vctx = fctx->streams[vid_stream]->codec;
          vcodec = avcodec_find_decoder(vctx->codec_id);
          if (vcodec)
-            avcodec_open(vctx, vcodec);
+            avcodec_open2(vctx, vcodec, nullptr);
       }
 
       if (aud_stream >= 0)
@@ -193,7 +190,7 @@ namespace FF
          actx = fctx->streams[aud_stream]->codec;
          acodec = avcodec_find_decoder(actx->codec_id);
          if (acodec)
-            avcodec_open(actx, acodec);
+            avcodec_open2(actx, acodec, nullptr);
       }
 
       // Extract ASS metadata header from stream.
@@ -205,7 +202,7 @@ namespace FF
             scodec = avcodec_find_decoder(sctx->codec_id);
             if (scodec)
             {
-               avcodec_open(sctx, scodec);
+               avcodec_open2(sctx, scodec, nullptr);
 
                if (sctx->extradata != nullptr)
                   sub_info.ass_data.insert(sub_info.ass_data.end(), sctx->extradata, sctx->extradata + sctx->extradata_size);
