@@ -38,7 +38,7 @@ using namespace AV;
 
 namespace Internal
 {
-   static const char* glsl_program = 
+   static const char* glsl_program_yuv = 
       "const mat3 yuv2mat = mat3"
       "("
       "    1,        1,          1,"
@@ -72,14 +72,35 @@ namespace Internal
       "   gl_FragColor = res;" 
       "}";
 
-   constexpr static GLfloat vertexes[12] = {
-      0, 0, 0,
-      0, 1, 0,
-      1, 1, 0,
-      1, 0, 0
+   static const char* glsl_program_rgb = 
+      "uniform sampler2D tex_y;"
+      "uniform sampler2D tex_u;"
+      "uniform sampler2D tex_v;"
+      ""
+      "vec4 rgbTEX(vec2 coord)"
+      "{"
+      "   vec4 yuv;"
+      "   yuv.g = texture2D(tex_y, coord).x;"
+      "   yuv.b = texture2D(tex_u, coord).x;"
+      "   yuv.r = texture2D(tex_v, coord).x;"
+      "   yuv.a = 1.0;"
+      "   return yuv;"
+      "}"
+      ""
+      "void main()"
+      "{"
+      "   vec4 res = rgbTEX(gl_TexCoord[0].xy);"
+      "   gl_FragColor = res;" 
+      "}";
+
+   constexpr static GLfloat vertexes[] = {
+      0, 0,
+      0, 1,
+      1, 1,
+      1, 0,
    };
 
-   constexpr static GLfloat tex_coords[8] = {
+   constexpr static GLfloat tex_coords[] = {
       0, 1,
       0, 0,
       1, 0,
@@ -91,7 +112,8 @@ float GL::aspect_ratio = 0.0;
 unsigned GL::current_x = 0;
 unsigned GL::current_y = 0;
 
-GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_width), height(in_height), fullscreen(false), do_fullscreen(false)
+GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio, int pix_fmt)
+   : width(in_width), height(in_height), fullscreen(false), do_fullscreen(false)
 {
    if (SDL_Init(SDL_INIT_VIDEO) < 0)
       throw std::runtime_error("Couldn't init SDL.");
@@ -126,7 +148,7 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
    SDL_WM_SetCaption("SLIMPlayer", nullptr);
    SDL_ShowCursor(SDL_DISABLE);
 
-   init_glsl();
+   init_glsl(pix_fmt);
 
    std::vector<uint8_t> tmp(width * height);
    std::fill(tmp.begin(), tmp.end(), 0x80);
@@ -146,13 +168,15 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio) : width(in_
 
    glEnableClientState(GL_VERTEX_ARRAY);
    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), Internal::vertexes);
+   glVertexPointer(2, GL_FLOAT, 2 * sizeof(GLfloat), Internal::vertexes);
    glTexCoordPointer(2, GL_FLOAT, 2 * sizeof(GLfloat), Internal::tex_coords);
 
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
 
    CHECK_GL_ERROR();
+
+   subsample = pix_fmt != PIX_FMT_GBR24P;
 }
 
 
@@ -181,16 +205,23 @@ void GL::get_rect(unsigned& in_width, unsigned& in_height)
 
 void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 {
-   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), Internal::vertexes);
+   glVertexPointer(2, GL_FLOAT, 2 * sizeof(GLfloat), Internal::vertexes);
    glColor4f(1.0, 1.0, 1.0, 1.0);
    glUseProgram(glsl.gl_program);
 
    glClear(GL_COLOR_BUFFER_BIT);
 
    // YUV420P
-   int xs = 1, ys = 1;
+   int xs = 0, ys = 0;
+   if (subsample)
+   {
+      xs = 1;
+      ys = 1;
+   }
+
    float chromas[2] = {0.5, 0.5};
    glUniform2fv(glsl.chroma_shift, 1, chromas);
+   ////
 
    for (int i = 0; i < 3; i++)
    {
@@ -214,7 +245,7 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), (void*)256);
+   glVertexPointer(2, GL_FLOAT, 2 * sizeof(GLfloat), (void*)256);
 }
 
 void GL::subtitle(const Sub::Message& msg)
@@ -232,13 +263,13 @@ void GL::subtitle(const Sub::Message& msg)
    float y_l = (float)(current_y - msg.rect.y - msg.rect.h) / current_y;
 
    const GLfloat vertexes[] = {
-      x_l, y_l, 0,
-      x_l, y_h, 0,
-      x_h, y_h, 0,
-      x_h, y_l, 0
+      x_l, y_l,
+      x_l, y_h,
+      x_h, y_h,
+      x_h, y_l,
    };
 
-   glVertexPointer(3, GL_FLOAT, 3 * sizeof(GLfloat), vertexes);
+   glVertexPointer(2, GL_FLOAT, 2 * sizeof(GLfloat), vertexes);
    glDrawArrays(GL_QUADS, 0, 4);
 }
 
@@ -336,11 +367,17 @@ void GL::print_linker_log(GLuint obj)
       std::cerr << "Linker log: " << &info_log[0] << std::endl;
 }
 
-void GL::init_glsl()
+void GL::init_glsl(int pix_fmt)
 {
    glsl.gl_program = glCreateProgram();
    glsl.fragment_program = glCreateShader(GL_FRAGMENT_SHADER);
-   glShaderSource(glsl.fragment_program, 1, static_cast<const char**>(&Internal::glsl_program), 0);
+
+   const char **prog = &Internal::glsl_program_yuv;
+   if (pix_fmt == PIX_FMT_GBR24P)
+      prog = &Internal::glsl_program_rgb;
+
+   glShaderSource(glsl.fragment_program, 1, prog, 0);
+
    glCompileShader(glsl.fragment_program);
    glAttachShader(glsl.gl_program, glsl.fragment_program);
    print_shader_log(glsl.fragment_program);

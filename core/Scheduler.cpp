@@ -295,15 +295,7 @@ namespace AV
             video_pts += frame_time();
 
          video_pts += frame->repeat_pict / (2.0 * frame_time());
-
-         if (file->video().ctx->pix_fmt == PIX_FMT_YUV420P)
-            vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
-         else // Should fix this up.
-         {
-            std::swap(frame->data[1], frame->data[2]);
-            std::swap(frame->linesize[1], frame->linesize[2]);
-            vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
-         }
+         vid->frame(frame->data, frame->linesize, file->video().width, file->video().height);
       }
    }
 
@@ -439,7 +431,7 @@ namespace AV
    // Video thread
    void Scheduler::video_thread_fn()
    {
-      auto vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio);
+      auto vid = GL::shared(file->video().width, file->video().height, file->video().aspect_ratio, file->video().ctx->pix_fmt);
       video = vid;
       auto event = GLEvent::shared();
 

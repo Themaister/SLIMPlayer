@@ -41,7 +41,7 @@ namespace Video {
    {
       public:
          DECL_SMART(GL);
-         GL(unsigned in_width, unsigned in_height, float in_aspect_ratio);
+         GL(unsigned in_width, unsigned in_height, float in_aspect_ratio, int pix_fmt);
 
          GL(const GL&) = delete;
          void operator=(const GL&) = delete;
@@ -62,10 +62,11 @@ namespace Video {
          static unsigned current_y;
          bool fullscreen;
          bool do_fullscreen;
+         bool subsample;
 
          GLuint gl_tex[4];
 
-         void init_glsl();
+         void init_glsl(int pix_fmt);
 
          struct
          {
