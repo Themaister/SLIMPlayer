@@ -6,7 +6,7 @@ TARGET_SRC := $(wildcard */*.cpp)
 TARGET_OBJ := $(TARGET_SRC:.cpp=.o)
 HEADERS := $(wildcard */*.hpp)
 
-LIBS := $(shell pkg-config alsa libass --libs) $(shell pkg-config sdl --libs) -lGL
+LIBS := $(shell pkg-config alsa libass --libs) $(shell pkg-config sdl --libs) -lGL -lGLEW
 FFMPEG_LIBS := $(shell pkg-config libavutil libavformat libavcodec --libs)
 INCDIRS := -I. -Icore $(shell pkg-config sdl --cflags) $(shell pkg-config libavutil libavformat libavcodec libass --cflags)
 

@@ -25,12 +25,8 @@
 
 #include "subs/subtitle.hpp"
 
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
-#include <GL/glext.h>
-#define NO_SDL_GLEXT
+#include <GL/glew.h>
 #include "SDL.h"
-#include "SDL_opengl.h"
 
 namespace AV {
 namespace Video {
@@ -62,18 +58,12 @@ namespace Video {
          static unsigned current_y;
          bool fullscreen;
          bool do_fullscreen;
-         bool subsample;
 
          GLuint gl_tex[4];
+         unsigned subsamp_log2[3][2];
 
          void init_glsl(int pix_fmt);
-
-         struct
-         {
-            GLuint gl_program;
-            GLuint fragment_program;
-            GLint chroma_shift;
-         } glsl;
+         GLuint gl_program;
 
          static unsigned get_alignment(unsigned pitch);
          static void set_viewport(unsigned width, unsigned height);

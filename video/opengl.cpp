@@ -38,69 +38,115 @@ using namespace AV;
 
 namespace Internal
 {
-   static const char* glsl_program_yuv = 
-      "const mat3 yuv2mat = mat3"
-      "("
-      "    1,        1,          1,"
-      "    0,        -0.39465,   2.03211,"
-      "    1.13983,  -0.58060,   0"
-      ");"
+   static const char *glsl_program_planar =
+      "uniform mat4 colormatrix;"
       ""
-      "vec4 yuv2rgb(vec3 yuv)"
+      "uniform sampler2D tex_1;"
+      "uniform sampler2D tex_2;"
+      "uniform sampler2D tex_3;"
+      "uniform vec2 chroma_shift[3];"
+      ""
+      "vec4 planar_tex(vec2 coord)"
       "{"
-      "   vec3 ret = yuv2mat * yuv;"
-      "   return vec4(ret, 1.0);"
-      "}"
-      ""
-      "uniform sampler2D tex_y;"
-      "uniform sampler2D tex_u;"
-      "uniform sampler2D tex_v;"
-      "uniform vec2 chroma_shift;"
-      ""
-      "vec4 yuvTEX(vec2 coord)"
-      "{"
-      "   vec3 yuv;"
-      "   yuv.x = texture2D(tex_y, coord).x;"
-      "   yuv.y = texture2D(tex_u, chroma_shift.x * coord).x - 0.5;"
-      "   yuv.z = texture2D(tex_v, chroma_shift.y * coord).x - 0.5;"
-      "   return yuv2rgb(yuv);"
+      "   vec4 packed = vec4("
+      "     texture2D(tex_1, chroma_shift[0] * coord).x,"
+      "     texture2D(tex_2, chroma_shift[1] * coord).x,"
+      "     texture2D(tex_3, chroma_shift[2] * coord).x,"
+      "     1.0);"
+      "   return colormatrix * packed;"
       "}"
       ""
       "void main()"
       "{"
-      "   vec4 res = yuvTEX(gl_TexCoord[0].xy);"
-      "   gl_FragColor = res;" 
+      "   gl_FragColor = planar_tex(gl_TexCoord[0].xy);"
       "}";
 
-   static const char* glsl_program_rgb = 
-      "uniform sampler2D tex_y;"
-      "uniform sampler2D tex_u;"
-      "uniform sampler2D tex_v;"
-      ""
-      "vec4 rgbTEX(vec2 coord)"
-      "{"
-      "   vec4 yuv;"
-      "   yuv.g = texture2D(tex_y, coord).x;"
-      "   yuv.b = texture2D(tex_u, coord).x;"
-      "   yuv.r = texture2D(tex_v, coord).x;"
-      "   yuv.a = 1.0;"
-      "   return yuv;"
-      "}"
+#if 0
+   static const char* glsl_program_packed = 
+      "uniform sampler2D tex_1;"
       ""
       "void main()"
       "{"
-      "   vec4 res = rgbTEX(gl_TexCoord[0].xy);"
-      "   gl_FragColor = res;" 
+      "   gl_FragColor = texture2D(tex_1, gl_TexCoord[0].xy);" 
       "}";
+#endif
 
-   constexpr static GLfloat vertexes[] = {
+   static const char **pixfmt_to_shader(int pix_fmt)
+   {
+      switch (pix_fmt)
+      {
+         case PIX_FMT_GBR24P:
+            return &glsl_program_planar;
+
+         case PIX_FMT_YUV420P:
+            return &glsl_program_planar;
+
+         default:
+            return &glsl_program_planar;
+      }
+   }
+
+   static void pixfmt_to_colormatrix(int pix_fmt, GLfloat mat[16])
+   {
+      static const GLfloat gbr24p[16] = {
+         0, 1, 0, 0,
+         0, 0, 1, 0,
+         1, 0, 0, 0,
+         0, 0, 0, 1,
+      };
+
+      static const GLfloat yuv420p[16] = {
+         1, 1, 1, 0,
+         0, -0.344, 1.77, 0,
+         1.403, -0.714, 0, 0,
+         -0.7015, 0.529, -0.885, 1,
+      };
+
+      switch (pix_fmt)
+      {
+         case PIX_FMT_GBR24P:
+            std::copy(gbr24p, gbr24p + 16, mat);
+            break;
+
+         case PIX_FMT_YUV420P:
+            std::copy(yuv420p, yuv420p + 16, mat);
+            break;
+
+         default:
+            std::fill(mat, mat + 16, 0.0f);
+      }
+   }
+
+   static void pixfmt_to_subsamp_log2(int pix_fmt, unsigned sub[3][2])
+   {
+      switch (pix_fmt)
+      {
+         case PIX_FMT_YUV420P:
+            sub[0][0] = 0;
+            sub[0][1] = 0;
+            sub[1][0] = 1;
+            sub[1][1] = 1;
+            sub[2][0] = 1;
+            sub[2][1] = 1;
+            break;
+
+         case PIX_FMT_GBR24P:
+            std::fill(&sub[0][0], &sub[3][0], 0);
+            break;
+
+         default:
+            std::fill(&sub[0][0], &sub[3][0], 0);
+      }
+   }
+
+   const GLfloat vertexes[] = {
       0, 0,
       0, 1,
       1, 1,
       1, 0,
    };
 
-   constexpr static GLfloat tex_coords[] = {
+   const GLfloat tex_coords[] = {
       0, 1,
       0, 0,
       1, 0,
@@ -153,7 +199,7 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio, int pix_fmt
    std::vector<uint8_t> tmp(width * height);
    std::fill(tmp.begin(), tmp.end(), 0x80);
 
-   for (int i = 0; i < 3; i++)
+   for (unsigned i = 0; i < 3; i++)
    {
       glActiveTexture(GL_TEXTURE0 + i);
       glBindTexture(GL_TEXTURE_2D, gl_tex[i]);
@@ -175,8 +221,6 @@ GL::GL(unsigned in_width, unsigned in_height, float in_aspect_ratio, int pix_fmt
    glLoadIdentity();
 
    CHECK_GL_ERROR();
-
-   subsample = pix_fmt != PIX_FMT_GBR24P;
 }
 
 
@@ -207,23 +251,11 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
 {
    glVertexPointer(2, GL_FLOAT, 2 * sizeof(GLfloat), Internal::vertexes);
    glColor4f(1.0, 1.0, 1.0, 1.0);
-   glUseProgram(glsl.gl_program);
+   glUseProgram(gl_program);
 
    glClear(GL_COLOR_BUFFER_BIT);
 
-   // YUV420P
-   int xs = 0, ys = 0;
-   if (subsample)
-   {
-      xs = 1;
-      ys = 1;
-   }
-
-   float chromas[2] = {0.5, 0.5};
-   glUniform2fv(glsl.chroma_shift, 1, chromas);
-   ////
-
-   for (int i = 0; i < 3; i++)
+   for (unsigned i = 0; i < 3; i++)
    {
       glActiveTexture(GL_TEXTURE0 + i);
       glBindTexture(GL_TEXTURE_2D, gl_tex[i]);
@@ -231,7 +263,7 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
       glPixelStorei(GL_UNPACK_ALIGNMENT, get_alignment(pitch[i]));
       glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch[i]); 
       glTexSubImage2D(GL_TEXTURE_2D,
-            0, 0, 0, w >> (i ? xs : 0), h >> (i ? ys : 0), GL_LUMINANCE, GL_UNSIGNED_BYTE, data[i]);
+            0, 0, 0, w >> subsamp_log2[i][0], h >> subsamp_log2[i][1], GL_LUMINANCE, GL_UNSIGNED_BYTE, data[i]);
    }
 
    glDrawArrays(GL_QUADS, 0, 4);
@@ -244,8 +276,6 @@ void GL::frame(const uint8_t * const * data, const int *pitch, int w, int h)
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-   glVertexPointer(2, GL_FLOAT, 2 * sizeof(GLfloat), (void*)256);
 }
 
 void GL::subtitle(const Sub::Message& msg)
@@ -287,13 +317,13 @@ void GL::set_viewport(unsigned width, unsigned height)
 
    // If the aspect ratios of screen and desired aspect ratio are sufficiently equal (floating point stuff), 
    // assume they are actually equal.
-   if ((int)(device_aspect*1000) > (int)(desired_aspect*1000))
+   if ((int)(device_aspect * 1000) > (int)(desired_aspect * 1000))
    {
       delta = (desired_aspect / device_aspect - 1.0) / 2.0 + 0.5;
       glViewport(width * (0.5 - delta), 0, 2.0 * width * delta, height);
    }
 
-   else if ((int)(device_aspect*1000) < (int)(desired_aspect*1000))
+   else if ((int)(device_aspect * 1000) < (int)(desired_aspect * 1000))
    {
       delta = (device_aspect / desired_aspect - 1.0) / 2.0 + 0.5;
       glViewport(0, height * (0.5 - delta), width, 2.0 * height * delta);
@@ -332,10 +362,6 @@ void GL::flip()
 
 GL::~GL()
 {
-   glDisableClientState(GL_VERTEX_ARRAY);
-   glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-   glDeleteTextures(4, gl_tex);
-
    SDL_Quit();
 }
 
@@ -369,31 +395,48 @@ void GL::print_linker_log(GLuint obj)
 
 void GL::init_glsl(int pix_fmt)
 {
-   glsl.gl_program = glCreateProgram();
-   glsl.fragment_program = glCreateShader(GL_FRAGMENT_SHADER);
+   glewInit();
+   if (!GLEW_VERSION_2_0)
+      throw std::runtime_error("GLEW failed to initialize ...\n");
 
-   const char **prog = &Internal::glsl_program_yuv;
-   if (pix_fmt == PIX_FMT_GBR24P)
-      prog = &Internal::glsl_program_rgb;
+   gl_program = glCreateProgram();
+   GLuint fragment = glCreateShader(GL_FRAGMENT_SHADER);
 
-   glShaderSource(glsl.fragment_program, 1, prog, 0);
+   auto prog = Internal::pixfmt_to_shader(pix_fmt);
+   glShaderSource(fragment, 1, prog, 0);
 
-   glCompileShader(glsl.fragment_program);
-   glAttachShader(glsl.gl_program, glsl.fragment_program);
-   print_shader_log(glsl.fragment_program);
+   glCompileShader(fragment);
+   glAttachShader(gl_program, fragment);
+   print_shader_log(fragment);
 
-   glLinkProgram(glsl.gl_program);
-   glUseProgram(glsl.gl_program);
-   print_linker_log(glsl.gl_program);
+   glLinkProgram(gl_program);
+   glUseProgram(gl_program);
+   print_linker_log(gl_program);
 
-   glsl.chroma_shift = glGetUniformLocation(glsl.gl_program, "chroma_shift");
-
-   GLint loc = glGetUniformLocation(glsl.gl_program, "tex_y");
+   // Textures
+   GLint loc = glGetUniformLocation(gl_program, "tex_1");
    glUniform1i(loc, 0);
-   loc = glGetUniformLocation(glsl.gl_program, "tex_u");
+   loc = glGetUniformLocation(gl_program, "tex_2");
    glUniform1i(loc, 1);
-   loc = glGetUniformLocation(glsl.gl_program, "tex_v");
+   loc = glGetUniformLocation(gl_program, "tex_3");
    glUniform1i(loc, 2);
+
+   // Chroma subsample
+   GLint chroma_shift = glGetUniformLocation(gl_program, "chroma_shift");
+   Internal::pixfmt_to_subsamp_log2(pix_fmt, subsamp_log2);
+   GLfloat chroma_shifts[3][2];
+   for (unsigned i = 0; i < 3; i++)
+   {
+      chroma_shifts[i][0] = 1.0f / (1 << subsamp_log2[i][0]);
+      chroma_shifts[i][1] = 1.0f / (1 << subsamp_log2[i][1]);
+   }
+   glUniform2fv(chroma_shift, 3, &chroma_shifts[0][0]);
+
+   // Colorspace matrix. ?? -> RGB.
+   GLint colormatrix = glGetUniformLocation(gl_program, "colormatrix");
+   GLfloat colormat[16];
+   Internal::pixfmt_to_colormatrix(pix_fmt, colormat);
+   glUniformMatrix4fv(colormatrix, 1, GL_FALSE, colormat);
 }
 
 namespace Internal
